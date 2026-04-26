@@ -491,9 +491,21 @@
 
 <div class="save-indicator" id="save-indicator">✓ Sauvegardé</div>
 
-<script>
-const BIN_ID  = "69ed884b856a68218972866c";
-const API_KEY = "$2a$10$h4.qcsndZo0hrJUhEfXGDOapIc3dMAS2e/S8gUHhUf4zEMGvp42Bu";
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-app.js";
+import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDMu2_fdfgpBccPi8RfG36CedDwxnuBurc",
+  authDomain: "konohadiplo.firebaseapp.com",
+  projectId: "konohadiplo",
+  storageBucket: "konohadiplo.firebasestorage.app",
+  messagingSenderId: "789271420105",
+  appId: "1:789271420105:web:ca8f888b74fcee14338118"
+};
+
+const app = initializeApp(firebaseConfig);
+const firebaseDb = getFirestore(app);
 
 const ROLES = {
   admin:'Administrateur', gerant:'Gérant Diplomatique',
@@ -527,49 +539,36 @@ async function loadDB() {
 
 async function fetchRemoteDB() {
   try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 8000);
-    const res = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`, {
-      headers:{"X-Master-Key":API_KEY}, signal:controller.signal
-    });
-    clearTimeout(timeout);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const raw = await res.json();
-    const data = raw.record ?? raw;
-    if (data && Array.isArray(data.users)) {
-      db = data;
+    const ref = doc(firebaseDb, "app", "konoha");
+    const snap = await getDoc(ref);
+
+    if (snap.exists()) {
+      db = snap.data();
       if (!Array.isArray(db.jugements)) db.jugements = [];
       if (!Array.isArray(db.dettes)) db.dettes = [];
       cacheWrite(db);
-      setDbStatus('ok','Archives synchronisées ✓');
-      if (currentUser) {
-        currentUser = db.users.find(u => u.id === currentUser.id) || currentUser;
-        refreshAll();
-      }
+      setDbStatus('ok','Firebase connecté ✓');
+      if (currentUser) refreshAll();
     } else {
       db = JSON.parse(JSON.stringify(DEFAULT_DB));
       await saveDB(true);
-      cacheWrite(db);
-      setDbStatus('ok','Archives initialisées ✓');
+      setDbStatus('ok','Base créée ✓');
     }
   } catch(e) {
-    setDbStatus(e.name==='AbortError'?'err':'err', e.name==='AbortError'?'Délai dépassé — données locales':'Hors ligne — données locales');
+    console.error(e);
+    setDbStatus('err','Erreur Firebase');
   }
 }
 
 async function saveDB(silent=false) {
   try {
-    const res = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
-      method:"PUT",
-      headers:{"Content-Type":"application/json","X-Master-Key":API_KEY},
-      body:JSON.stringify(db)
-    });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    await setDoc(doc(firebaseDb, "app", "konoha"), db);
     cacheWrite(db);
     if (!silent) showSaveIndicator('✓ Sauvegardé', false);
   } catch(e) {
+    console.error(e);
     cacheWrite(db);
-    if (!silent) showSaveIndicator('⚠ Sauvegardé en local', true);
+    if (!silent) showSaveIndicator('⚠ Local uniquement', true);
   }
 }
 
