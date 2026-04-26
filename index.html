@@ -560,17 +560,104 @@ async function fetchRemoteDB() {
   }
 }
 
-async function saveDB(silent=false) {
-  try {
-    await setDoc(doc(firebaseDb, "app", "konoha"), db);
-    cacheWrite(db);
-    if (!silent) showSaveIndicator('✓ Sauvegardé', false);
-  } catch(e) {
-    console.error(e);
-    cacheWrite(db);
-    if (!silent) showSaveIndicator('⚠ Local uniquement', true);
-  }
+async function importJSON() {
+  const data = {
+    users: [
+      { id: "u0", username: "admin", password: "admin123", role: "admin", approved: true },
+      { id: "u1777218915227", username: "ChosukeAkimichi", password: "Mathis71!", role: "diplomate", approved: true },
+      { id: "u1777223382983", username: "Yama Tori", password: "WiloDiplo88", role: "gerant", approved: true },
+      { id: "u1777224502345", username: "chozu", password: "chozuya", role: "gerant", approved: true },
+      { id: "u1777224789153", username: "Mashiro", password: "Silfurthedragon1989*", role: "apprenti", approved: true },
+      { id: "u1777225271608", username: "Yoshida Tora", password: "anthony973", role: "apprenti", approved: true }
+    ],
+
+    ninjas: [
+      { id: "n1777175513578", prenom: "Pochi", nom: "Hoki", grade: "Chunin", village: "Suna", photo: null },
+      { id: "n1777219034936", prenom: "Zushen", nom: "Gaki", grade: "Chunin", village: "Suna", photo: null },
+      { id: "n1777224716375", prenom: "Natsuka", nom: "Kurohana", grade: "Chunin", village: "Konoha", photo: null },
+      { id: "n1777224729939", prenom: "Tetsu", nom: "Tsuda", grade: "Chunin", village: "Konoha", photo: null }
+    ],
+
+    fautes: [
+      {
+        id: "f1777218741837",
+        type: "Crime de guerre",
+        village: "Suna",
+        ninjaId: "n1777175513578",
+        details: "Entré dans le pays du feu sans autorisation en bataille",
+        date: "26/04/2026",
+        author: "admin"
+      },
+      {
+        id: "f1777218758215",
+        type: "Crime de guerre",
+        village: "Suna",
+        ninjaId: "n1777175513578",
+        details: "Entré dans le pays du feu sans autorisation en pour attaqué une équipe de ninja.",
+        date: "26/04/2026",
+        author: "admin"
+      },
+      {
+        id: "f1777218775700",
+        type: "Brisé de traité",
+        village: "Suna",
+        ninjaId: "n1777175513578",
+        details: "Prise de parole non autorisé en diplomatie.",
+        date: "26/04/2026",
+        author: "admin"
+      },
+      {
+        id: "f1777219046553",
+        type: "Brisé de traité",
+        village: "Suna",
+        ninjaId: "n1777219034936",
+        details: "Port du masque en diplomatie",
+        date: "26/04/2026",
+        author: "admin"
+      }
+    ],
+
+    transactions: [],
+    balance: 0,
+
+    jugements: [
+      {
+        id: "j1777219180764",
+        ninjaId: "n1777175513578",
+        date: "25/04/2026",
+        peine: "Travaux d'interêt généraux (1 mois)",
+        notes: "",
+        statut: "clos",
+        author: "admin"
+      }
+    ],
+
+    dettes: []
+  };
+
+  await setDoc(doc(firebaseDb, "app", "konoha"), data);
+  console.log("✅ Import Firebase OK");
 }
+
+// LANCER UNE SEULE FOIS
+importJSON();
+
+  async function importJSON() {
+  const data = {
+    users: [...],   // colle TON JSON complet ici
+    ninjas: [...],
+    fautes: [...],
+    transactions: [],
+    balance: 0,
+    jugements: [...],
+    dettes: []
+  };
+
+  await setDoc(doc(firebaseDb, "app", "konoha"), data);
+  console.log("✅ Import OK");
+}
+
+importJSON();
 
 function scheduleSave() { clearTimeout(saveTimeout); saveTimeout = setTimeout(() => saveDB(), 800); }
 
