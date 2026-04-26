@@ -660,10 +660,10 @@ function switchPage(page) {
   document.getElementById('nav-'+page).classList.add('active');
   if (page==='ninjas')     refreshNinjas();
   if (page==='fautes')     { refreshNinjaSelect(); refreshFautes(); }
-  if (page==='alertes')    refreshAlertes();
-  if (page==='jugements')  refreshJugements();
+  if (page==='alertes')    { refreshAlertes(); clearBadge('alert-badge'); }
+  if (page==='jugements')  { refreshJugements(); clearBadge('jugement-badge'); }
   if (page==='tresorerie') refreshTreasury();
-  if (page==='dettes')     refreshDettes();
+  if (page==='dettes')     { refreshDettes(); clearBadge('dette-badge'); }
   if (page==='comptes')    refreshComptes();
 }
 
@@ -806,6 +806,11 @@ function refreshFautes() {
 }
 
 // ALERTES
+function clearBadge(id) {
+  const el = document.getElementById(id);
+  if (el) el.style.display = 'none';
+}
+
 function updateBadge() {
   const alerte = db.ninjas.filter(n =>
     db.fautes.filter(f => f.ninjaId===n.id).length >= 3 &&
