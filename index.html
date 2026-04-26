@@ -641,17 +641,6 @@ async function importJSON() {
 
 
 
-  async function importJSON() {
-  const data = {
-    users: [...],   // colle TON JSON complet ici
-    ninjas: [...],
-    fautes: [...],
-    transactions: [],
-    balance: 0,
-    jugements: [...],
-    dettes: []
-  };
-
   await setDoc(doc(firebaseDb, "app", "konoha"), data);
   console.log("✅ Import OK");
 }
