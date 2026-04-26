@@ -128,6 +128,9 @@
   .fault-pill{display:inline-block;padding:2px 8px;border-radius:2px;font-size:0.72rem;font-family:'Cinzel',serif;border:1px solid;}
   .fault-Brise{background:#fff3cd;color:#856404;border-color:#ffc107;}
   .fault-Crime{background:#fde8e8;color:#8b1a1a;border-color:#c42b2b;}
+  .paid-pill{display:inline-block;padding:2px 7px;border-radius:2px;font-size:0.7rem;font-family:'Cinzel',serif;border:1px solid;}
+  .paid-oui{background:#e8f5e8;color:#1a4a1a;border-color:#2d6b2d;}
+  .paid-non{background:#fde8e8;color:#8b1a1a;border-color:#c42b2b;}
   .role-admin{color:var(--gold);font-family:'Cinzel',serif;font-size:0.75rem;}
   .role-gerant{color:#1a4a1a;font-family:'Cinzel',serif;font-size:0.75rem;}
   .role-diplomate{color:#0c5460;font-family:'Cinzel',serif;font-size:0.75rem;}
@@ -147,6 +150,15 @@
   .confirm-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:300;display:none;align-items:center;justify-content:center;}
   .confirm-overlay.open{display:flex;}
   .confirm-box{background:var(--parch-light);border:2px solid var(--parch-edge);border-radius:4px;padding:2rem;max-width:380px;width:90%;box-shadow:0 10px 40px rgba(0,0,0,0.6);}
+  /* Casier styles */
+  .casier-action{padding:8px 12px;border-bottom:1px solid rgba(184,149,90,0.25);display:flex;align-items:flex-start;gap:10px;font-size:0.83rem;}
+  .casier-action:last-child{border-bottom:none;}
+  .casier-icon{font-size:1rem;flex-shrink:0;margin-top:1px;}
+  .casier-detail{flex:1;color:var(--ink);}
+  .casier-meta{font-size:0.7rem;color:var(--ink-light);font-style:italic;margin-top:2px;}
+  /* Faute clickable row */
+  .faute-row-clickable{cursor:pointer;}
+  .faute-row-clickable:hover td{background:rgba(139,26,26,0.06);}
 </style>
 </head>
 <body>
@@ -177,7 +189,7 @@
       <label>Mot de passe</label><input type="password" id="reg-pass" placeholder="••••••••" />
       <label>Confirmer</label><input type="password" id="reg-pass2" placeholder="••••••••" />
       <div id="reg-error" class="error-msg" style="display:none;"></div>
-      <div style="font-size:0.8rem;color:var(--ink-fade);font-style:italic;margin-bottom:1rem;">Votre compte sera validé par un Administrateur avant activation.</div>
+      <div style="font-size:0.8rem;color:var(--ink-fade);font-style:italic;margin-bottom:1rem;">Votre compte sera validé par un Administrateur ou Gérant avant activation.</div>
       <button class="btn btn-primary" onclick="doRegister()">Soumettre la demande</button>
       <div class="toggle-link">Déjà un compte ? <a onclick="showLogin()">Se connecter</a></div>
     </div>
@@ -274,13 +286,23 @@
             </div>
           </div>
           <div><label>Ninja responsable</label><select id="f-ninja"><option value="">— Sélectionner un ninja —</option></select></div>
+          <div>
+            <label>Amende / Réparation payée ?</label>
+            <div class="check-group">
+              <label class="check-item"><input type="radio" name="faute-paye" value="non" checked /><span class="check-label" style="color:var(--red-seal);">Non payée</span></label>
+              <label class="check-item"><input type="radio" name="faute-paye" value="oui" /><span class="check-label" style="color:var(--konoha-green);">Payée / Acquittée</span></label>
+            </div>
+          </div>
           <div class="form-full"><label>Détails de l'incident</label><textarea id="f-details" placeholder="Décrivez les circonstances, preuves et témoignages..."></textarea></div>
         </div>
         <div class="flex-end"><button class="btn btn-danger" onclick="addFaute()">⚠ Enregistrer la Faute</button></div>
         <div class="sep"></div>
       </div>
       <div class="scroll-table">
-        <table><thead><tr><th>Date</th><th>Type</th><th>Ninja</th><th>Village</th><th>Détails</th><th></th></tr></thead><tbody id="faute-tbody"></tbody></table>
+        <table>
+          <thead><tr><th>Date</th><th>Type</th><th>Ninja</th><th>Village</th><th>Payée</th><th>Ajoutée par</th><th>Aperçu</th><th></th></tr></thead>
+          <tbody id="faute-tbody"></tbody>
+        </table>
       </div>
       <div id="faute-empty" class="empty-state">Aucune faute enregistrée. La paix règne.</div>
     </div>
@@ -289,7 +311,7 @@
   <!-- ALERTES -->
   <div id="page-alertes" class="page">
     <div class="parchment">
-      <div class="parchment-title"><span class="kana">警告</span> Alertes — Ninjas Récidivistes<span style="font-size:0.8rem;font-weight:400;color:var(--red-seal);font-style:italic;margin-left:auto;">≥ 3 fautes graves</span></div>
+      <div class="parchment-title"><span class="kana">警告</span> Alertes — Ninjas Récidivistes<span style="font-size:0.8rem;font-weight:400;color:var(--red-seal);font-style:italic;margin-left:auto;">≥ 3 fautes depuis dernier jugement</span></div>
       <div id="alerte-list"></div>
       <div id="alerte-empty" class="empty-state">Aucune alerte active. Les archives sont en paix.</div>
     </div>
@@ -329,14 +351,10 @@
   <div id="page-dettes" class="page">
     <div class="parchment">
       <div class="parchment-title"><span class="kana">負債</span> Registre des Dettes</div>
-
-      <!-- Bannière alerte dette imminente -->
       <div class="dette-alert-banner" id="dette-alert-banner">
         <div style="font-family:'Cinzel',serif;font-size:0.85rem;color:var(--red-seal);letter-spacing:0.08em;margin-bottom:0.5rem;">⚠ MAJORATION IMMINENTE</div>
         <div id="dette-alert-content" style="font-size:0.85rem;color:var(--ink-fade);font-style:italic;"></div>
       </div>
-
-      <!-- Formulaire ajout dette -->
       <div id="dette-add-section">
         <div class="form-grid">
           <div>
@@ -366,8 +384,6 @@
         <div class="flex-end"><button class="btn btn-primary" onclick="addDette()">📜 Enregistrer la Dette</button></div>
         <div class="sep"></div>
       </div>
-
-      <!-- Récap dettes actives -->
       <div id="dette-list"></div>
       <div id="dette-empty" class="empty-state">Aucune dette enregistrée. Les caisses sont en ordre.</div>
     </div>
@@ -477,7 +493,25 @@
   </div>
 </div>
 
-<!-- Confirmation suppression dette -->
+<!-- Modal détail faute -->
+<div class="modal-overlay" id="modal-faute-detail">
+  <div class="modal-box" style="max-width:580px;">
+    <button class="modal-close" onclick="closeModal('modal-faute-detail')">✕</button>
+    <div class="modal-title" id="faute-detail-title">Détail de la Faute</div>
+    <div id="faute-detail-content"></div>
+  </div>
+</div>
+
+<!-- Modal casier utilisateur -->
+<div class="modal-overlay" id="modal-casier">
+  <div class="modal-box" style="max-width:620px;">
+    <button class="modal-close" onclick="closeModal('modal-casier')">✕</button>
+    <div class="modal-title" id="casier-title">Casier — Historique d'activité</div>
+    <div id="casier-content"></div>
+  </div>
+</div>
+
+<!-- Confirmation dette payée -->
 <div class="confirm-overlay" id="confirm-paye">
   <div class="confirm-box">
     <div style="font-family:'Cinzel',serif;font-size:1rem;font-weight:700;color:var(--ink);margin-bottom:1rem;letter-spacing:0.1em;">Confirmer le remboursement</div>
@@ -513,7 +547,7 @@ const ROLES = {
 };
 const DEFAULT_DB = {
   users:[{id:'u0',username:'admin',password:'admin123',role:'admin',approved:true}],
-  ninjas:[],fautes:[],jugements:[],transactions:[],balance:0,dettes:[]
+  ninjas:[],fautes:[],jugements:[],transactions:[],balance:0,dettes:[],actionLog:[]
 };
 
 let db = JSON.parse(JSON.stringify(DEFAULT_DB));
@@ -526,13 +560,13 @@ let jugementTargetNinjaId = null;
 let dettePayeId = null;
 let editJugementId = null;
 
-const LS_KEY = 'konoha_db_cache';
+const LS_KEY = 'konoha_db_cache_v2';
 function cacheRead() { try { const r=localStorage.getItem(LS_KEY); if(r) return JSON.parse(r); } catch(e){} return null; }
 function cacheWrite(d) { try { localStorage.setItem(LS_KEY, JSON.stringify(d)); } catch(e){} }
 
 async function loadDB() {
   const cached = cacheRead();
-  if (cached && cached.users) { db = cached; if (!db.dettes) db.dettes = []; setDbStatus('cache','Archives locales chargées'); }
+  if (cached && cached.users) { db = cached; if (!db.dettes) db.dettes=[]; if (!db.actionLog) db.actionLog=[]; setDbStatus('cache','Archives locales chargées'); }
   else setDbStatus('loading','Connexion aux archives...');
   fetchRemoteDB();
 }
@@ -541,11 +575,11 @@ async function fetchRemoteDB() {
   try {
     const ref = doc(firebaseDb, "app", "konoha");
     const snap = await getDoc(ref);
-
     if (snap.exists()) {
       db = snap.data();
-      if (!Array.isArray(db.jugements)) db.jugements = [];
-      if (!Array.isArray(db.dettes)) db.dettes = [];
+      if (!Array.isArray(db.jugements)) db.jugements=[];
+      if (!Array.isArray(db.dettes)) db.dettes=[];
+      if (!Array.isArray(db.actionLog)) db.actionLog=[];
       cacheWrite(db);
       setDbStatus('ok','Firebase connecté ✓');
       if (currentUser) refreshAll();
@@ -560,7 +594,7 @@ async function fetchRemoteDB() {
   }
 }
 
-  async function saveDB(silent=false) {
+async function saveDB(silent=false) {
   try {
     await setDoc(doc(firebaseDb, "app", "konoha"), db);
     cacheWrite(db);
@@ -572,89 +606,22 @@ async function fetchRemoteDB() {
   }
 }
 
-async function importJSON() {
-  const data = {
-    users: [
-      { id: "u0", username: "admin", password: "admin123", role: "admin", approved: true },
-      { id: "u1777218915227", username: "ChosukeAkimichi", password: "Mathis71!", role: "diplomate", approved: true },
-      { id: "u1777223382983", username: "Yama Tori", password: "WiloDiplo88", role: "gerant", approved: true },
-      { id: "u1777224502345", username: "chozu", password: "chozuya", role: "gerant", approved: true },
-      { id: "u1777224789153", username: "Mashiro", password: "Silfurthedragon1989*", role: "apprenti", approved: true },
-      { id: "u1777225271608", username: "Yoshida Tora", password: "anthony973", role: "apprenti", approved: true }
-    ],
-
-    ninjas: [
-      { id: "n1777175513578", prenom: "Pochi", nom: "Hoki", grade: "Chunin", village: "Suna", photo: null },
-      { id: "n1777219034936", prenom: "Zushen", nom: "Gaki", grade: "Chunin", village: "Suna", photo: null },
-      { id: "n1777224716375", prenom: "Natsuka", nom: "Kurohana", grade: "Chunin", village: "Konoha", photo: null },
-      { id: "n1777224729939", prenom: "Tetsu", nom: "Tsuda", grade: "Chunin", village: "Konoha", photo: null }
-    ],
-
-    fautes: [
-      {
-        id: "f1777218741837",
-        type: "Crime de guerre",
-        village: "Suna",
-        ninjaId: "n1777175513578",
-        details: "Entré dans le pays du feu sans autorisation en bataille",
-        date: "26/04/2026",
-        author: "admin"
-      },
-      {
-        id: "f1777218758215",
-        type: "Crime de guerre",
-        village: "Suna",
-        ninjaId: "n1777175513578",
-        details: "Entré dans le pays du feu sans autorisation en pour attaqué une équipe de ninja.",
-        date: "26/04/2026",
-        author: "admin"
-      },
-      {
-        id: "f1777218775700",
-        type: "Brisé de traité",
-        village: "Suna",
-        ninjaId: "n1777175513578",
-        details: "Prise de parole non autorisé en diplomatie.",
-        date: "26/04/2026",
-        author: "admin"
-      },
-      {
-        id: "f1777219046553",
-        type: "Brisé de traité",
-        village: "Suna",
-        ninjaId: "n1777219034936",
-        details: "Port du masque en diplomatie",
-        date: "26/04/2026",
-        author: "admin"
-      }
-    ],
-
-    transactions: [],
-    balance: 0,
-
-    jugements: [
-      {
-        id: "j1777219180764",
-        ninjaId: "n1777175513578",
-        date: "25/04/2026",
-        peine: "Travaux d'interêt généraux (1 mois)",
-        notes: "",
-        statut: "clos",
-        author: "admin"
-      }
-    ],
-
-    dettes: []
-  };
-
-  await setDoc(doc(firebaseDb, "app", "konoha"), data);
-  console.log("✅ Import Firebase OK");
-}
-
-
-
-
 function scheduleSave() { clearTimeout(saveTimeout); saveTimeout = setTimeout(() => saveDB(), 800); }
+
+// Log an action to the casier
+function logAction(type, description, details={}) {
+  if (!db.actionLog) db.actionLog=[];
+  db.actionLog.unshift({
+    id:'log'+Date.now()+Math.random(),
+    type, description, details,
+    author: currentUser?.username||'?',
+    authorId: currentUser?.id||'?',
+    date: new Date().toLocaleDateString('fr-FR'),
+    timestamp: Date.now()
+  });
+  // keep last 500 entries
+  if (db.actionLog.length > 500) db.actionLog = db.actionLog.slice(0,500);
+}
 
 function setDbStatus(state, text) {
   const dot = document.getElementById('db-dot');
@@ -681,14 +648,13 @@ function doLogin() {
   const user = db.users.find(x => x.username===u && x.password===p);
   if (!user) { showErr(err,'Identifiant ou mot de passe incorrect.'); return; }
   if (!user.approved) { showErr(err,'Votre compte est en attente de validation.'); return; }
-  err.style.display = 'none';
+  err.style.display='none';
   currentUser = user;
-  document.getElementById('login-screen').style.display = 'none';
-  document.getElementById('app').style.cssText = 'display:flex;flex-direction:column;min-height:100vh;';
-  document.getElementById('user-display').textContent = user.username;
-  document.getElementById('role-display').textContent = ROLES[user.role]||user.role;
-  // Initialiser la date du formulaire dette
-  document.getElementById('d-date').value = new Date().toISOString().split('T')[0];
+  document.getElementById('login-screen').style.display='none';
+  document.getElementById('app').style.cssText='display:flex;flex-direction:column;min-height:100vh;';
+  document.getElementById('user-display').textContent=user.username;
+  document.getElementById('role-display').textContent=ROLES[user.role]||user.role;
+  document.getElementById('d-date').value=new Date().toISOString().split('T')[0];
   switchPage('ninjas');
   refreshAll();
 }
@@ -706,30 +672,29 @@ function doRegister() {
   scheduleSave();
   showLogin();
   const lerr = document.getElementById('login-error');
-  lerr.style.cssText = 'display:block;color:var(--konoha-green);font-style:italic;';
-  lerr.textContent = "Compte créé ! En attente de validation par l'Administrateur.";
+  lerr.style.cssText='display:block;color:var(--konoha-green);font-style:italic;';
+  lerr.textContent="Compte créé ! En attente de validation par l'Administrateur ou un Gérant.";
 }
 
 function doLogout() {
-  currentUser = null;
-  document.getElementById('app').style.display = 'none';
-  document.getElementById('login-screen').style.display = 'flex';
-  document.getElementById('login-user').value = '';
-  document.getElementById('login-pass').value = '';
-  document.getElementById('login-error').style.display = 'none';
+  currentUser=null;
+  document.getElementById('app').style.display='none';
+  document.getElementById('login-screen').style.display='flex';
+  document.getElementById('login-user').value='';
+  document.getElementById('login-pass').value='';
+  document.getElementById('login-error').style.display='none';
   fetchRemoteDB();
 }
 
 function showErr(el, msg) { el.style.cssText='display:block;color:var(--red-seal);font-style:italic;'; el.textContent=msg; }
 
 // PERMISSIONS
-// Diplomates et apprentis peuvent maintenant ajouter des ninjas
 function canAddNinja()       { return ['admin','gerant','diplomate','apprenti'].includes(currentUser?.role); }
 function canDeleteNinja()    { return ['admin','gerant'].includes(currentUser?.role); }
 function canAddFaute()       { return ['admin','gerant','diplomate','apprenti'].includes(currentUser?.role); }
 function canDeleteFaute()    { return ['admin','gerant'].includes(currentUser?.role); }
 function canManageTreasury() { return ['admin','gerant','diplomate'].includes(currentUser?.role); }
-function canManageUsers()    { return currentUser?.role === 'admin'; }
+function canManageUsers()    { return ['admin','gerant'].includes(currentUser?.role); }
 function canManageDettes()   { return ['admin','gerant','diplomate'].includes(currentUser?.role); }
 function canJugement()       { return ['admin','gerant'].includes(currentUser?.role); }
 
@@ -756,18 +721,18 @@ function refreshAll() {
 
 // PHOTO
 function previewPhoto(e) {
-  const file = e.target.files[0]; if (!file) return;
-  const reader = new FileReader();
-  reader.onload = ev => {
-    pendingPhoto = ev.target.result;
-    const prev = document.getElementById('n-photo-preview');
-    prev.src = pendingPhoto; prev.style.display='block';
+  const file=e.target.files[0]; if(!file) return;
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    pendingPhoto=ev.target.result;
+    const prev=document.getElementById('n-photo-preview');
+    prev.src=pendingPhoto; prev.style.display='block';
     document.getElementById('n-photo-placeholder').style.display='none';
   };
   reader.readAsDataURL(file);
 }
 function clearPhoto() {
-  pendingPhoto = null;
+  pendingPhoto=null;
   document.getElementById('n-photo-preview').style.display='none';
   document.getElementById('n-photo-input').value='';
   document.getElementById('n-photo-placeholder').style.display='block';
@@ -778,12 +743,14 @@ function gradeClass(g) { return 'grade-'+g.replace(/\s/g,'_'); }
 
 function addNinja() {
   if (!canAddNinja()) return;
-  const prenom = document.getElementById('n-prenom').value.trim();
-  const nom = document.getElementById('n-nom').value.trim();
-  const grade = document.getElementById('n-grade').value;
-  const village = document.getElementById('n-village').value;
+  const prenom=document.getElementById('n-prenom').value.trim();
+  const nom=document.getElementById('n-nom').value.trim();
+  const grade=document.getElementById('n-grade').value;
+  const village=document.getElementById('n-village').value;
   if (!prenom||!nom||!grade) { alert('Remplissez les champs obligatoires.'); return; }
-  db.ninjas.push({id:'n'+Date.now(),prenom,nom,grade,village,photo:pendingPhoto});
+  const ninja={id:'n'+Date.now(),prenom,nom,grade,village,photo:pendingPhoto};
+  db.ninjas.push(ninja);
+  logAction('ninja_add',`Ninja ajouté : ${prenom} ${nom}`,{ninjaId:ninja.id,grade,village});
   document.getElementById('n-prenom').value='';
   document.getElementById('n-nom').value='';
   document.getElementById('n-grade').value='';
@@ -793,36 +760,39 @@ function addNinja() {
 function deleteNinja(id) {
   if (!canDeleteNinja()) return;
   if (!confirm('Supprimer définitivement ce ninja des archives ?')) return;
-  db.ninjas = db.ninjas.filter(n => n.id!==id);
+  const n=db.ninjas.find(x=>x.id===id);
+  logAction('ninja_delete',`Ninja retiré : ${n?n.prenom+' '+n.nom:'inconnu'}`,{ninjaId:id});
+  db.ninjas=db.ninjas.filter(n=>n.id!==id);
   refreshNinjas(); refreshNinjaSelect(); refreshFautes(); refreshAlertes(); updateBadge();
   scheduleSave();
 }
 
 function refreshNinjas() {
-  document.getElementById('ninja-add-section').style.display = canAddNinja() ? '' : 'none';
-  const query = (document.getElementById('ninja-search')?.value||'').toLowerCase().trim();
-  const tbody = document.getElementById('ninja-tbody');
-  const empty = document.getElementById('ninja-empty');
-  const noRes = document.getElementById('ninja-noresult');
+  document.getElementById('ninja-add-section').style.display=canAddNinja()?'':'none';
+  const query=(document.getElementById('ninja-search')?.value||'').toLowerCase().trim();
+  const tbody=document.getElementById('ninja-tbody');
+  const empty=document.getElementById('ninja-empty');
+  const noRes=document.getElementById('ninja-noresult');
   if (db.ninjas.length===0) { tbody.innerHTML=''; empty.style.display='block'; noRes.style.display='none'; return; }
   empty.style.display='none';
-  const list = query ? db.ninjas.filter(n =>
+  const list=query?db.ninjas.filter(n=>
     n.prenom.toLowerCase().includes(query)||n.nom.toLowerCase().includes(query)||
-    n.grade.toLowerCase().includes(query)||n.village.toLowerCase().includes(query)) : db.ninjas;
+    n.grade.toLowerCase().includes(query)||n.village.toLowerCase().includes(query)):db.ninjas;
   if (list.length===0) { tbody.innerHTML=''; noRes.style.display='block'; return; }
   noRes.style.display='none'; tbody.innerHTML='';
-  list.forEach(n => {
-    const fCount = db.fautes.filter(f => f.ninjaId===n.id).length;
-    const gc = gradeClass(n.grade);
-    const avatar = n.photo
-      ? `<div class="ninja-avatar"><img src="${n.photo}" alt="${n.prenom}" /></div>`
-      : `<div class="ninja-avatar">${n.prenom[0]||'?'}</div>`;
-    const enJugement = (db.jugements||[]).some(j => j.ninjaId===n.id && j.statut==='en_attente');
-    const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${avatar}</td><td>${n.prenom}</td><td>${n.nom}</td>
+  list.forEach(n=>{
+    const fCount=db.fautes.filter(f=>f.ninjaId===n.id).length;
+    const gc=gradeClass(n.grade);
+    const avatar=n.photo
+      ?`<div class="ninja-avatar"><img src="${n.photo}" alt="${n.prenom}" /></div>`
+      :`<div class="ninja-avatar">${n.prenom[0]||'?'}</div>`;
+    const enJugement=(db.jugements||[]).some(j=>j.ninjaId===n.id&&j.statut==='en_attente');
+    const newFaultCount=countNewFaultsSinceLastJugement(n.id);
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td>${avatar}</td><td>${n.prenom}</td><td>${n.nom}</td>
       <td><span class="grade-badge ${gc}">${n.grade}</span></td>
       <td><span class="village-badge village-${n.village}">${n.village}</span></td>
-      <td style="font-family:'Cinzel',serif;font-size:0.85rem;color:${fCount>=3?'var(--red-seal)':'var(--ink)'};">${fCount}${fCount>=3?' ⚠':''}${enJugement?' <span style="color:var(--gold);font-size:0.7rem;">⚖</span>':''}</td>
+      <td style="font-family:'Cinzel',serif;font-size:0.85rem;color:${newFaultCount>=3?'var(--red-seal)':'var(--ink)'};">${fCount} total${newFaultCount>=3?' ⚠':''}${enJugement?' <span style="color:var(--gold);font-size:0.7rem;">⚖</span>':''}</td>
       <td><button class="btn btn-ghost btn-sm" onclick="openProfil('${n.id}')">📜 Profil</button></td>
       <td>${canDeleteNinja()?`<button class="btn btn-ghost btn-sm" onclick="deleteNinja('${n.id}')">Retirer</button>`:''}</td>`;
     tbody.appendChild(tr);
@@ -830,118 +800,200 @@ function refreshNinjas() {
 }
 
 function refreshNinjaSelect() {
-  ['f-ninja','d-ninja'].forEach(selId => {
-    const sel = document.getElementById(selId); if (!sel) return;
-    const cur = sel.value;
-    sel.innerHTML = '<option value="">— Sélectionner un ninja —</option>';
-    db.ninjas.forEach(n => {
-      const opt = document.createElement('option');
-      opt.value = n.id; opt.textContent = `${n.prenom} ${n.nom} (${n.grade})`;
-      if (n.id===cur) opt.selected=true; sel.appendChild(opt);
+  ['f-ninja','d-ninja'].forEach(selId=>{
+    const sel=document.getElementById(selId); if(!sel) return;
+    const cur=sel.value;
+    sel.innerHTML='<option value="">— Sélectionner un ninja —</option>';
+    db.ninjas.forEach(n=>{
+      const opt=document.createElement('option');
+      opt.value=n.id; opt.textContent=`${n.prenom} ${n.nom} (${n.grade})`;
+      if(n.id===cur) opt.selected=true; sel.appendChild(opt);
     });
   });
+}
+
+// ── ALERT LOGIC: count faults AFTER the last CLOSED judgment ──
+function getLastClosedJugementTimestamp(ninjaId) {
+  const closed=(db.jugements||[]).filter(j=>j.ninjaId===ninjaId&&j.statut==='clos');
+  if (closed.length===0) return 0;
+  // jugements have id like 'j1777...' = timestamp-based; use max id numerically
+  const maxId=Math.max(...closed.map(j=>parseInt(j.id.replace('j',''))||0));
+  return maxId;
+}
+
+function countNewFaultsSinceLastJugement(ninjaId) {
+  const lastJugTs=getLastClosedJugementTimestamp(ninjaId);
+  // faults have id like 'f<timestamp>'
+  return db.fautes.filter(f=>{
+    if (f.ninjaId!==ninjaId) return false;
+    const fTs=parseInt(f.id.replace('f',''))||0;
+    return fTs > lastJugTs;
+  }).length;
 }
 
 // FAUTES
 function addFaute() {
   if (!canAddFaute()) return;
-  const type = document.querySelector('input[name="faute-type"]:checked')?.value;
-  const village = document.querySelector('input[name="faute-village"]:checked')?.value;
-  const ninjaId = document.getElementById('f-ninja').value;
-  const details = document.getElementById('f-details').value.trim();
+  const type=document.querySelector('input[name="faute-type"]:checked')?.value;
+  const village=document.querySelector('input[name="faute-village"]:checked')?.value;
+  const ninjaId=document.getElementById('f-ninja').value;
+  const details=document.getElementById('f-details').value.trim();
+  const paye=document.querySelector('input[name="faute-paye"]:checked')?.value||'non';
   if (!ninjaId||!details) { alert('Sélectionnez un ninja et ajoutez des détails.'); return; }
-  db.fautes.push({id:'f'+Date.now(),type,village,ninjaId,details,
-    date:new Date().toLocaleDateString('fr-FR'),author:currentUser.username});
+  const faute={id:'f'+Date.now(),type,village,ninjaId,details,paye,
+    date:new Date().toLocaleDateString('fr-FR'),author:currentUser.username,authorId:currentUser.id};
+  db.fautes.push(faute);
+  const ninja=db.ninjas.find(x=>x.id===ninjaId);
+  logAction('faute_add',`Faute enregistrée : ${type} — ${ninja?ninja.prenom+' '+ninja.nom:'?'}`,
+    {fauteId:faute.id,ninjaId,type,village,paye});
   document.getElementById('f-details').value='';
   document.getElementById('f-ninja').value='';
+  document.querySelector('input[name="faute-paye"][value="non"]').checked=true;
   refreshFautes(); refreshNinjas(); refreshAlertes(); updateBadge(); scheduleSave();
 }
 
 function deleteFaute(id) {
   if (!canDeleteFaute()) return;
   if (!confirm('Supprimer cette faute des archives ?')) return;
-  db.fautes = db.fautes.filter(f => f.id!==id);
+  const f=db.fautes.find(x=>x.id===id);
+  logAction('faute_delete',`Faute supprimée (${f?f.type:'?'})`,{fauteId:id});
+  db.fautes=db.fautes.filter(f=>f.id!==id);
   refreshFautes(); refreshNinjas(); refreshAlertes(); updateBadge(); scheduleSave();
 }
 
+function openFauteDetail(fauteId) {
+  const f=db.fautes.find(x=>x.id===fauteId); if(!f) return;
+  const ninja=db.ninjas.find(x=>x.id===f.ninjaId);
+  const ninjaName=ninja?`${ninja.prenom} ${ninja.nom}`:'Ninja inconnu';
+  const typeKey=f.type==='Crime de guerre'?'Crime':'Brise';
+  const payeLabel=f.paye==='oui'?'✓ Payée / Acquittée':'✗ Non payée';
+  const payeColor=f.paye==='oui'?'var(--konoha-green)':'var(--red-seal)';
+  const avatar=ninja?.photo
+    ?`<img src="${ninja.photo}" style="width:52px;height:52px;border-radius:50%;object-fit:cover;border:2px solid var(--parch-edge);" />`
+    :`<div style="width:52px;height:52px;border-radius:50%;background:var(--parch-mid);border:2px solid var(--parch-edge);display:flex;align-items:center;justify-content:center;font-family:'Noto Serif JP',serif;font-size:1.2rem;color:var(--ink-light);">${(ninja?.prenom||'?')[0]}</div>`;
+
+  document.getElementById('faute-detail-title').textContent=`Faute — ${ninjaName}`;
+  document.getElementById('faute-detail-content').innerHTML=`
+    <div style="display:flex;gap:14px;align-items:center;margin-bottom:1.5rem;padding-bottom:1rem;border-bottom:1px solid var(--parch-edge);">
+      ${avatar}
+      <div>
+        <div style="font-family:'Cinzel',serif;font-size:1rem;margin-bottom:6px;">${ninjaName}</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          ${ninja?`<span class="grade-badge ${gradeClass(ninja.grade)}">${ninja.grade}</span><span class="village-badge village-${ninja.village}">${ninja.village}</span>`:''}
+        </div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:1.5rem;">
+      <div style="background:rgba(184,149,90,0.1);border:1px solid rgba(184,149,90,0.4);border-radius:3px;padding:0.8rem;">
+        <div style="font-family:'Cinzel',serif;font-size:0.68rem;color:var(--ink-fade);letter-spacing:0.08em;margin-bottom:4px;">TYPE D'INFRACTION</div>
+        <span class="fault-pill fault-${typeKey}">${f.type}</span>
+      </div>
+      <div style="background:rgba(184,149,90,0.1);border:1px solid rgba(184,149,90,0.4);border-radius:3px;padding:0.8rem;">
+        <div style="font-family:'Cinzel',serif;font-size:0.68rem;color:var(--ink-fade);letter-spacing:0.08em;margin-bottom:4px;">VILLAGE CONCERNÉ</div>
+        <span class="village-badge village-${f.village}">${f.village}</span>
+      </div>
+      <div style="background:rgba(184,149,90,0.1);border:1px solid rgba(184,149,90,0.4);border-radius:3px;padding:0.8rem;">
+        <div style="font-family:'Cinzel',serif;font-size:0.68rem;color:var(--ink-fade);letter-spacing:0.08em;margin-bottom:4px;">DATE DE L'INCIDENT</div>
+        <div style="font-size:0.9rem;color:var(--ink);">${f.date}</div>
+      </div>
+      <div style="background:rgba(184,149,90,0.1);border:1px solid rgba(184,149,90,0.4);border-radius:3px;padding:0.8rem;">
+        <div style="font-family:'Cinzel',serif;font-size:0.68rem;color:var(--ink-fade);letter-spacing:0.08em;margin-bottom:4px;">AMENDE / RÉPARATION</div>
+        <div style="font-size:0.9rem;font-family:'Cinzel',serif;color:${payeColor};">${payeLabel}</div>
+      </div>
+    </div>
+    <div style="background:rgba(139,26,26,0.04);border:1.5px solid rgba(139,26,26,0.2);border-radius:3px;padding:1.2rem;">
+      <div style="font-family:'Cinzel',serif;font-size:0.72rem;color:var(--ink-fade);letter-spacing:0.1em;margin-bottom:0.7rem;">DESCRIPTION COMPLÈTE DE L'INCIDENT</div>
+      <div style="font-size:0.92rem;color:var(--ink);line-height:1.7;white-space:pre-wrap;">${f.details}</div>
+    </div>
+    <div style="margin-top:1rem;padding-top:0.8rem;border-top:1px solid rgba(184,149,90,0.3);font-size:0.75rem;color:var(--ink-light);font-style:italic;display:flex;justify-content:space-between;align-items:center;">
+      <span>Enregistré par <strong style="color:var(--ink);">${f.author||'?'}</strong></span>
+      <span>Référence : <code style="font-family:monospace;font-size:0.7rem;">${f.id}</code></span>
+    </div>`;
+  document.getElementById('modal-faute-detail').classList.add('open');
+}
+
 function refreshFautes() {
-  document.getElementById('faute-add-section').style.display = canAddFaute() ? '' : 'none';
-  const tbody = document.getElementById('faute-tbody');
-  const empty = document.getElementById('faute-empty');
+  document.getElementById('faute-add-section').style.display=canAddFaute()?'':'none';
+  const tbody=document.getElementById('faute-tbody');
+  const empty=document.getElementById('faute-empty');
   tbody.innerHTML='';
   if (db.fautes.length===0) { empty.style.display='block'; return; }
   empty.style.display='none';
-  [...db.fautes].reverse().forEach(f => {
-    const ninja = db.ninjas.find(n => n.id===f.ninjaId);
-    const name = ninja?`${ninja.prenom} ${ninja.nom}`:'Inconnu';
-    const typeKey = f.type==='Crime de guerre'?'Crime':'Brise';
-    const tr = document.createElement('tr');
-    tr.innerHTML = `<td style="white-space:nowrap;">${f.date}</td>
+  [...db.fautes].reverse().forEach(f=>{
+    const ninja=db.ninjas.find(n=>n.id===f.ninjaId);
+    const name=ninja?`${ninja.prenom} ${ninja.nom}`:'Inconnu';
+    const typeKey=f.type==='Crime de guerre'?'Crime':'Brise';
+    const payeKey=f.paye==='oui'?'oui':'non';
+    const payeLabel=f.paye==='oui'?'Oui':'Non';
+    const tr=document.createElement('tr');
+    tr.className='faute-row-clickable';
+    tr.onclick=()=>openFauteDetail(f.id);
+    tr.innerHTML=`<td style="white-space:nowrap;">${f.date}</td>
       <td><span class="fault-pill fault-${typeKey}">${f.type}</span></td>
       <td>${name}</td>
       <td><span class="village-badge village-${f.village}">${f.village}</span></td>
-      <td style="max-width:240px;font-size:0.82rem;font-style:italic;">${f.details.substring(0,80)}${f.details.length>80?'…':''}</td>
-      <td>${canDeleteFaute()?`<button class="btn btn-ghost btn-sm" onclick="deleteFaute('${f.id}')">✕</button>`:''}</td>`;
+      <td><span class="paid-pill paid-${payeKey}">${payeLabel}</span></td>
+      <td style="font-size:0.78rem;color:var(--ink-light);font-style:italic;">${f.author||'?'}</td>
+      <td style="max-width:180px;font-size:0.82rem;font-style:italic;color:var(--ink-fade);">${f.details.substring(0,50)}${f.details.length>50?'…':''}</td>
+      <td onclick="event.stopPropagation()">${canDeleteFaute()?`<button class="btn btn-ghost btn-sm" onclick="deleteFaute('${f.id}')">✕</button>`:''}</td>`;
     tbody.appendChild(tr);
   });
 }
 
-// ALERTES
+// ALERTES — only trigger for faults AFTER last closed jugement
 function clearBadge(id) {
-  const el = document.getElementById(id);
-  if (el) el.style.display = 'none';
+  const el=document.getElementById(id); if(el) el.style.display='none';
 }
 
 function updateBadge() {
-  const alerte = db.ninjas.filter(n =>
-    db.fautes.filter(f => f.ninjaId===n.id).length >= 3 &&
-    !(db.jugements||[]).some(j => j.ninjaId===n.id && j.statut==='en_attente')
-  ).length;
-  const badge = document.getElementById('alert-badge');
-  badge.style.display = alerte>0?'flex':'none'; badge.textContent=alerte;
+  const alerte=db.ninjas.filter(n=>{
+    const enJug=(db.jugements||[]).some(j=>j.ninjaId===n.id&&j.statut==='en_attente');
+    if (enJug) return false;
+    return countNewFaultsSinceLastJugement(n.id)>=3;
+  }).length;
+  const badge=document.getElementById('alert-badge');
+  badge.style.display=alerte>0?'flex':'none'; badge.textContent=alerte;
 
-  const enAttente = (db.jugements||[]).filter(j => j.statut==='en_attente').length;
-  const jbadge = document.getElementById('jugement-badge');
+  const enAttente=(db.jugements||[]).filter(j=>j.statut==='en_attente').length;
+  const jbadge=document.getElementById('jugement-badge');
   if (jbadge) { jbadge.style.display=enAttente>0?'flex':'none'; jbadge.textContent=enAttente; }
 
-  // Badge dettes : dettes Konoha approchant la majoration (moins de 2 jours)
-  const now = Date.now();
-  const detteAlerts = (db.dettes||[]).filter(d => {
-    if (d.paye) return false;
-    const debitor = d.debitor==='ninja' ? 'ninja' : d.debitor;
-    if (debitor!=='Konoha') return false;
-    const created = new Date(d.date).getTime();
-    const msElapsed = now - created;
-    const daysPassed = msElapsed / (1000*60*60*24);
-    const cyclePos = daysPassed % 7;
-    const daysUntilNext = 7 - cyclePos;
-    return daysUntilNext <= 2;
+  const now=Date.now();
+  const detteAlerts=(db.dettes||[]).filter(d=>{
+    if(d.paye) return false;
+    if(d.debitor!=='Konoha') return false;
+    const created=new Date(d.date).getTime();
+    const msElapsed=now-created;
+    const daysPassed=msElapsed/(1000*60*60*24);
+    const cyclePos=daysPassed%7;
+    return (7-cyclePos)<=2;
   }).length;
-  const dbadge = document.getElementById('dette-badge');
+  const dbadge=document.getElementById('dette-badge');
   if (dbadge) { dbadge.style.display=detteAlerts>0?'flex':'none'; dbadge.textContent=detteAlerts; }
 }
 
 function refreshAlertes() {
-  const list = document.getElementById('alerte-list');
-  const empty = document.getElementById('alerte-empty');
-  // Ninjas ≥3 fautes ET pas en jugement en_attente
-  const flagged = db.ninjas.filter(n =>
-    db.fautes.filter(f => f.ninjaId===n.id).length >= 3 &&
-    !(db.jugements||[]).some(j => j.ninjaId===n.id && j.statut==='en_attente')
-  );
+  const list=document.getElementById('alerte-list');
+  const empty=document.getElementById('alerte-empty');
+  const flagged=db.ninjas.filter(n=>{
+    const enJug=(db.jugements||[]).some(j=>j.ninjaId===n.id&&j.statut==='en_attente');
+    if (enJug) return false;
+    return countNewFaultsSinceLastJugement(n.id)>=3;
+  });
   list.innerHTML='';
   if (flagged.length===0) { empty.style.display='block'; return; }
   empty.style.display='none';
-  flagged.forEach(n => {
-    const faults = db.fautes.filter(f => f.ninjaId===n.id);
-    const avatar = n.photo
-      ? `<img src="${n.photo}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;border:1.5px solid var(--red-seal);" />`
-      : `<div style="width:40px;height:40px;border-radius:50%;background:var(--parch-mid);border:1.5px solid var(--red-seal);display:flex;align-items:center;justify-content:center;font-family:'Noto Serif JP',serif;font-size:1rem;color:var(--ink-light);">${n.prenom[0]}</div>`;
-    const div = document.createElement('div'); div.className='alert-card';
-    div.innerHTML = `<div style="display:flex;align-items:center;gap:12px;">${avatar}
+  flagged.forEach(n=>{
+    const newFaults=countNewFaultsSinceLastJugement(n.id);
+    const totalFaults=db.fautes.filter(f=>f.ninjaId===n.id).length;
+    const avatar=n.photo
+      ?`<img src="${n.photo}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;border:1.5px solid var(--red-seal);" />`
+      :`<div style="width:40px;height:40px;border-radius:50%;background:var(--parch-mid);border:1.5px solid var(--red-seal);display:flex;align-items:center;justify-content:center;font-family:'Noto Serif JP',serif;font-size:1rem;color:var(--ink-light);">${n.prenom[0]}</div>`;
+    const div=document.createElement('div'); div.className='alert-card';
+    div.innerHTML=`<div style="display:flex;align-items:center;gap:12px;">${avatar}
       <div>
         <div style="font-family:'Cinzel',serif;font-size:1rem;">${n.prenom} ${n.nom}</div>
-        <div style="font-size:0.82rem;color:var(--red-seal);font-style:italic;">${faults.length} faute(s) — <span class="village-badge village-${n.village}">${n.village}</span></div>
+        <div style="font-size:0.82rem;color:var(--red-seal);font-style:italic;">${newFaults} nouvelle(s) faute(s) depuis dernier jugement · ${totalFaults} au total — <span class="village-badge village-${n.village}">${n.village}</span></div>
       </div></div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
         <button class="btn btn-ghost btn-sm" onclick="openDossier('${n.id}')">📋 Dossier</button>
@@ -952,105 +1004,111 @@ function refreshAlertes() {
 }
 
 function openDossier(ninjaId) {
-  const n = db.ninjas.find(x => x.id===ninjaId);
-  const faults = db.fautes.filter(f => f.ninjaId===ninjaId);
-  const gc = gradeClass(n.grade);
-  document.getElementById('dossier-title').textContent = `Dossier criminel : ${n.prenom} ${n.nom}`;
-  const avatar = n.photo
-    ? `<img src="${n.photo}" style="width:64px;height:64px;border-radius:50%;object-fit:cover;border:2px solid var(--parch-edge);" />`
-    : `<div style="width:64px;height:64px;border-radius:50%;background:var(--parch-mid);border:2px solid var(--parch-edge);display:flex;align-items:center;justify-content:center;font-family:'Noto Serif JP',serif;font-size:1.5rem;color:var(--ink-light);">${n.prenom[0]}</div>`;
-  let html = `<div style="display:flex;gap:14px;align-items:center;margin-bottom:1.5rem;padding-bottom:1rem;border-bottom:1px solid var(--parch-edge);">
+  const n=db.ninjas.find(x=>x.id===ninjaId);
+  const faults=db.fautes.filter(f=>f.ninjaId===ninjaId);
+  const gc=gradeClass(n.grade);
+  document.getElementById('dossier-title').textContent=`Dossier criminel : ${n.prenom} ${n.nom}`;
+  const avatar=n.photo
+    ?`<img src="${n.photo}" style="width:64px;height:64px;border-radius:50%;object-fit:cover;border:2px solid var(--parch-edge);" />`
+    :`<div style="width:64px;height:64px;border-radius:50%;background:var(--parch-mid);border:2px solid var(--parch-edge);display:flex;align-items:center;justify-content:center;font-family:'Noto Serif JP',serif;font-size:1.5rem;color:var(--ink-light);">${n.prenom[0]}</div>`;
+  let html=`<div style="display:flex;gap:14px;align-items:center;margin-bottom:1.5rem;padding-bottom:1rem;border-bottom:1px solid var(--parch-edge);">
     ${avatar}<div>
       <div style="font-family:'Cinzel',serif;font-size:1rem;margin-bottom:6px;">${n.prenom} ${n.nom}</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;"><span class="grade-badge ${gc}">${n.grade}</span><span class="village-badge village-${n.village}">${n.village}</span></div>
     </div></div>
     <div style="font-family:'Cinzel',serif;font-size:0.75rem;color:var(--ink-fade);letter-spacing:0.1em;margin-bottom:1rem;">INFRACTIONS RÉPERTORIÉES (${faults.length})</div>`;
-  faults.forEach(f => {
-    const tk = f.type==='Crime de guerre'?'Crime':'Brise';
-    html += `<div style="margin-bottom:1rem;padding:0.8rem;background:rgba(184,149,90,0.1);border-left:3px solid var(--red-seal);border-radius:0 2px 2px 0;">
+  faults.forEach(f=>{
+    const tk=f.type==='Crime de guerre'?'Crime':'Brise';
+    const payeColor=f.paye==='oui'?'var(--konoha-green)':'var(--red-seal)';
+    const payeLabel=f.paye==='oui'?'✓ Payée':'✗ Non payée';
+    html+=`<div style="margin-bottom:1rem;padding:0.8rem;background:rgba(184,149,90,0.1);border-left:3px solid var(--red-seal);border-radius:0 2px 2px 0;">
       <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px;flex-wrap:wrap;">
         <span class="fault-pill fault-${tk}">${f.type}</span>
         <span style="font-size:0.75rem;color:var(--ink-light);">${f.date}</span>
         <span style="font-size:0.75rem;color:var(--ink-light);font-style:italic;">par ${f.author||'?'}</span>
+        <span style="font-size:0.72rem;font-family:'Cinzel',serif;color:${payeColor};">${payeLabel}</span>
       </div>
-      <div style="font-size:0.85rem;font-style:italic;color:var(--ink-fade);">${f.details}</div>
+      <div style="font-size:0.85rem;font-style:italic;color:var(--ink-fade);">${f.details.substring(0,120)}${f.details.length>120?'…':''}</div>
     </div>`;
   });
-  document.getElementById('dossier-content').innerHTML = html;
-  const actions = document.getElementById('dossier-actions');
-  const dejaEnJugement = (db.jugements||[]).some(j => j.ninjaId===ninjaId && j.statut==='en_attente');
-  actions.innerHTML = dejaEnJugement
-    ? `<span style="font-family:'Cinzel',serif;font-size:0.78rem;color:var(--gold);font-style:italic;">⚖ Déjà en attente de jugement</span>`
-    : canJugement() ? `<button class="btn btn-danger" onclick="closeModal('modal-dossier');envoyerJugement('${ninjaId}')">⚖ Envoyer en jugement</button>` : '';
+  document.getElementById('dossier-content').innerHTML=html;
+  const actions=document.getElementById('dossier-actions');
+  const dejaEnJugement=(db.jugements||[]).some(j=>j.ninjaId===ninjaId&&j.statut==='en_attente');
+  actions.innerHTML=dejaEnJugement
+    ?`<span style="font-family:'Cinzel',serif;font-size:0.78rem;color:var(--gold);font-style:italic;">⚖ Déjà en attente de jugement</span>`
+    :canJugement()?`<button class="btn btn-danger" onclick="closeModal('modal-dossier');envoyerJugement('${ninjaId}')">⚖ Envoyer en jugement</button>`:'';
   document.getElementById('modal-dossier').classList.add('open');
 }
 
 // JUGEMENTS
 function envoyerJugement(ninjaId) {
   if (!canJugement()) { alert('Accès non autorisé.'); return; }
-  if (!db.jugements) db.jugements = [];
-  if (db.jugements.some(j => j.ninjaId===ninjaId && j.statut==='en_attente')) {
+  if (!db.jugements) db.jugements=[];
+  if (db.jugements.some(j=>j.ninjaId===ninjaId&&j.statut==='en_attente')) {
     alert('Ce ninja est déjà en attente de jugement.'); return;
   }
-  const n = db.ninjas.find(x => x.id===ninjaId);
-  jugementTargetNinjaId = ninjaId;
-  document.getElementById('jugement-modal-title').textContent = `Jugement : ${n.prenom} ${n.nom}`;
-  document.getElementById('jugement-ninja-info').textContent = `Grade : ${n.grade} — Village : ${n.village}`;
-  document.getElementById('j-date').value = new Date().toLocaleDateString('fr-FR');
+  const n=db.ninjas.find(x=>x.id===ninjaId);
+  jugementTargetNinjaId=ninjaId;
+  document.getElementById('jugement-modal-title').textContent=`Jugement : ${n.prenom} ${n.nom}`;
+  document.getElementById('jugement-ninja-info').textContent=`Grade : ${n.grade} — Village : ${n.village}`;
+  document.getElementById('j-date').value=new Date().toLocaleDateString('fr-FR');
   document.getElementById('j-peine').value='';
   document.getElementById('j-notes').value='';
   document.getElementById('modal-jugement').classList.add('open');
 }
 
 function confirmJugement() {
-  const date = document.getElementById('j-date').value.trim();
-  const peine = document.getElementById('j-peine').value.trim();
-  const notes = document.getElementById('j-notes').value.trim();
+  const date=document.getElementById('j-date').value.trim();
+  const peine=document.getElementById('j-peine').value.trim();
+  const notes=document.getElementById('j-notes').value.trim();
   if (!peine) { alert('Veuillez saisir la peine / résultat.'); return; }
-  if (!db.jugements) db.jugements = [];
-  db.jugements.push({
-    id:'j'+Date.now(), ninjaId:jugementTargetNinjaId,
-    date, peine, notes, statut:'en_attente', author:currentUser.username
-  });
+  if (!db.jugements) db.jugements=[];
+  const jug={id:'j'+Date.now(),ninjaId:jugementTargetNinjaId,date,peine,notes,statut:'en_attente',author:currentUser.username};
+  db.jugements.push(jug);
+  const n=db.ninjas.find(x=>x.id===jugementTargetNinjaId);
+  logAction('jugement_create',`Jugement ouvert : ${n?n.prenom+' '+n.nom:'?'}`,{jugementId:jug.id,ninjaId:jugementTargetNinjaId,peine});
   closeModal('modal-jugement');
   scheduleSave();
-  // Retirer de la liste d'alertes immédiatement + rafraîchir
   refreshAlertes(); refreshJugements(); refreshNinjas(); updateBadge();
 }
 
 function cloturerJugement(jugementId) {
   if (!canJugement()) { alert('Accès non autorisé.'); return; }
-  const j = (db.jugements||[]).find(x => x.id===jugementId);
-  if (j) j.statut='clos';
+  const j=(db.jugements||[]).find(x=>x.id===jugementId);
+  if (j) { j.statut='clos'; j.closedAt=Date.now(); }
+  const n=db.ninjas.find(x=>x.id===j?.ninjaId);
+  logAction('jugement_clos',`Jugement clos : ${n?n.prenom+' '+n.nom:'?'}`,{jugementId,ninjaId:j?.ninjaId});
   scheduleSave();
   refreshJugements(); refreshAlertes(); refreshNinjas(); updateBadge();
 }
 
 function ouvrirEditJugement(jugementId) {
   if (!canJugement()) { alert('Accès non autorisé.'); return; }
-  const j = (db.jugements||[]).find(x => x.id===jugementId);
-  if (!j) return;
-  const n = db.ninjas.find(x => x.id===j.ninjaId);
-  editJugementId = jugementId;
-  document.getElementById('edit-jugement-title').textContent = `Modifier : ${n?n.prenom+' '+n.nom:'Ninja inconnu'}`;
-  document.getElementById('edit-jugement-ninja-info').textContent = n?`Grade : ${n.grade} — Village : ${n.village}`:'';
-  document.getElementById('ej-statut').value = j.statut;
-  document.getElementById('ej-date').value = j.date;
-  document.getElementById('ej-peine').value = j.peine;
-  document.getElementById('ej-notes').value = j.notes||'';
+  const j=(db.jugements||[]).find(x=>x.id===jugementId); if(!j) return;
+  const n=db.ninjas.find(x=>x.id===j.ninjaId);
+  editJugementId=jugementId;
+  document.getElementById('edit-jugement-title').textContent=`Modifier : ${n?n.prenom+' '+n.nom:'Ninja inconnu'}`;
+  document.getElementById('edit-jugement-ninja-info').textContent=n?`Grade : ${n.grade} — Village : ${n.village}`:'';
+  document.getElementById('ej-statut').value=j.statut;
+  document.getElementById('ej-date').value=j.date;
+  document.getElementById('ej-peine').value=j.peine;
+  document.getElementById('ej-notes').value=j.notes||'';
   document.getElementById('modal-edit-jugement').classList.add('open');
 }
 
 function sauvegarderJugement() {
   if (!editJugementId) return;
-  const j = (db.jugements||[]).find(x => x.id===editJugementId);
-  if (!j) return;
-  const peine = document.getElementById('ej-peine').value.trim();
+  const j=(db.jugements||[]).find(x=>x.id===editJugementId); if(!j) return;
+  const peine=document.getElementById('ej-peine').value.trim();
   if (!peine) { alert('La peine ne peut pas être vide.'); return; }
-  j.statut = document.getElementById('ej-statut').value;
-  j.date   = document.getElementById('ej-date').value.trim();
-  j.peine  = peine;
-  j.notes  = document.getElementById('ej-notes').value.trim();
+  const newStatut=document.getElementById('ej-statut').value;
+  // if closing now, record closedAt
+  if (newStatut==='clos'&&j.statut!=='clos') j.closedAt=Date.now();
+  j.statut=newStatut;
+  j.date=document.getElementById('ej-date').value.trim();
+  j.peine=peine;
+  j.notes=document.getElementById('ej-notes').value.trim();
+  logAction('jugement_edit',`Jugement modifié`,{jugementId:editJugementId,statut:newStatut});
   closeModal('modal-edit-jugement');
   scheduleSave();
   refreshJugements(); refreshAlertes(); refreshNinjas(); updateBadge();
@@ -1059,42 +1117,40 @@ function sauvegarderJugement() {
 function supprimerJugement() {
   if (!editJugementId) return;
   if (!confirm('Supprimer définitivement ce jugement des archives ?')) return;
-  db.jugements = (db.jugements||[]).filter(x => x.id!==editJugementId);
-  editJugementId = null;
+  logAction('jugement_delete',`Jugement supprimé`,{jugementId:editJugementId});
+  db.jugements=(db.jugements||[]).filter(x=>x.id!==editJugementId);
+  editJugementId=null;
   closeModal('modal-edit-jugement');
   scheduleSave();
   refreshJugements(); refreshAlertes(); refreshNinjas(); updateBadge();
 }
 
 function refreshJugements() {
-  const list = document.getElementById('jugement-list');
-  const empty = document.getElementById('jugement-empty');
+  const list=document.getElementById('jugement-list');
+  const empty=document.getElementById('jugement-empty');
   if (!db.jugements) db.jugements=[];
-  const enAttente = db.jugements.filter(j => j.statut==='en_attente');
-  const clos = db.jugements.filter(j => j.statut==='clos');
+  const enAttente=db.jugements.filter(j=>j.statut==='en_attente');
+  const clos=db.jugements.filter(j=>j.statut==='clos');
   list.innerHTML='';
   if (db.jugements.length===0) { empty.style.display='block'; return; }
   empty.style.display='none';
 
   if (enAttente.length>0) {
-    list.innerHTML += `<div style="font-family:'Cinzel',serif;font-size:0.78rem;color:var(--red-seal);letter-spacing:0.1em;margin-bottom:1rem;">EN ATTENTE DE JUGEMENT (${enAttente.length})</div>`;
-    enAttente.forEach(j => {
-      const n = db.ninjas.find(x => x.id===j.ninjaId);
-      const name = n?`${n.prenom} ${n.nom}`:'Ninja inconnu';
-      const avatar = n?.photo
-        ? `<img src="${n.photo}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;border:1.5px solid var(--gold);" />`
-        : `<div style="width:40px;height:40px;border-radius:50%;background:var(--parch-mid);border:1.5px solid var(--gold);display:flex;align-items:center;justify-content:center;font-family:'Noto Serif JP',serif;font-size:1rem;color:var(--ink-light);">${(n?.prenom||'?')[0]}</div>`;
-      const div = document.createElement('div');
-      div.style.cssText = 'background:linear-gradient(135deg,#fffbe6,var(--parch-light));border:1.5px solid var(--gold);border-radius:3px;padding:1.2rem 1.5rem;margin-bottom:1rem;';
-      div.innerHTML = `
-        <div style="display:flex;align-items:center;gap:12px;margin-bottom:1rem;">
-          ${avatar}
-          <div style="flex:1;">
+    list.innerHTML+=`<div style="font-family:'Cinzel',serif;font-size:0.78rem;color:var(--red-seal);letter-spacing:0.1em;margin-bottom:1rem;">EN ATTENTE DE JUGEMENT (${enAttente.length})</div>`;
+    enAttente.forEach(j=>{
+      const n=db.ninjas.find(x=>x.id===j.ninjaId);
+      const name=n?`${n.prenom} ${n.nom}`:'Ninja inconnu';
+      const avatar=n?.photo
+        ?`<img src="${n.photo}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;border:1.5px solid var(--gold);" />`
+        :`<div style="width:40px;height:40px;border-radius:50%;background:var(--parch-mid);border:1.5px solid var(--gold);display:flex;align-items:center;justify-content:center;font-family:'Noto Serif JP',serif;font-size:1rem;color:var(--ink-light);">${(n?.prenom||'?')[0]}</div>`;
+      const div=document.createElement('div');
+      div.style.cssText='background:linear-gradient(135deg,#fffbe6,var(--parch-light));border:1.5px solid var(--gold);border-radius:3px;padding:1.2rem 1.5rem;margin-bottom:1rem;';
+      div.innerHTML=`<div style="display:flex;align-items:center;gap:12px;margin-bottom:1rem;">
+          ${avatar}<div style="flex:1;">
             <div style="font-family:'Cinzel',serif;font-size:1rem;">${name}</div>
             <div style="font-size:0.78rem;color:var(--ink-light);font-style:italic;">Jugement fixé au ${j.date} · par ${j.author}</div>
           </div>
-          ${canJugement()?`
-          <div style="display:flex;gap:6px;">
+          ${canJugement()?`<div style="display:flex;gap:6px;">
             <button class="btn btn-ghost btn-sm" onclick="ouvrirEditJugement('${j.id}')">✏ Modifier</button>
             <button class="btn btn-success btn-sm" onclick="cloturerJugement('${j.id}')">✓ Clôturer</button>
           </div>`:''}
@@ -1109,17 +1165,19 @@ function refreshJugements() {
   }
 
   if (clos.length>0) {
-    const sep = document.createElement('div');
-    sep.style.cssText = 'height:1px;background:var(--parch-edge);opacity:0.4;margin:1.5rem 0;';
+    const sep=document.createElement('div');
+    sep.style.cssText='height:1px;background:var(--parch-edge);opacity:0.4;margin:1.5rem 0;';
     list.appendChild(sep);
-    list.innerHTML += `<div style="font-family:'Cinzel',serif;font-size:0.78rem;color:var(--ink-fade);letter-spacing:0.1em;margin-bottom:1rem;">JUGEMENTS CLOS (${clos.length})</div>`;
-    clos.forEach(j => {
-      const n = db.ninjas.find(x => x.id===j.ninjaId);
-      const name = n?`${n.prenom} ${n.nom}`:'Ninja inconnu';
-      const div = document.createElement('div');
-      div.style.cssText = 'background:rgba(184,149,90,0.05);border:1px solid rgba(184,149,90,0.3);border-radius:3px;padding:1rem 1.5rem;margin-bottom:0.8rem;';
-      div.innerHTML = `
-        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+    const lbl=document.createElement('div');
+    lbl.style.cssText="font-family:'Cinzel',serif;font-size:0.78rem;color:var(--ink-fade);letter-spacing:0.1em;margin-bottom:1rem;";
+    lbl.textContent=`JUGEMENTS CLOS (${clos.length})`;
+    list.appendChild(lbl);
+    clos.forEach(j=>{
+      const n=db.ninjas.find(x=>x.id===j.ninjaId);
+      const name=n?`${n.prenom} ${n.nom}`:'Ninja inconnu';
+      const div=document.createElement('div');
+      div.style.cssText='background:rgba(184,149,90,0.05);border:1px solid rgba(184,149,90,0.3);border-radius:3px;padding:1rem 1.5rem;margin-bottom:0.8rem;';
+      div.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
           <div>
             <span style="font-family:'Cinzel',serif;font-size:0.88rem;">${name}</span>
             <span style="font-size:0.75rem;color:var(--ink-light);font-style:italic;margin-left:8px;">${j.date}</span>
@@ -1138,59 +1196,64 @@ function refreshJugements() {
 
 // PROFIL NINJA
 function openProfil(ninjaId) {
-  const n = db.ninjas.find(x => x.id===ninjaId);
-  const faults = db.fautes.filter(f => f.ninjaId===ninjaId);
-  const jugs = (db.jugements||[]).filter(j => j.ninjaId===ninjaId);
-  const gc = gradeClass(n.grade);
-  document.getElementById('profil-title').textContent = `Profil — ${n.prenom} ${n.nom}`;
-  const avatar = n.photo
-    ? `<img src="${n.photo}" style="width:80px;height:80px;border-radius:50%;object-fit:cover;border:3px solid var(--parch-edge);" />`
-    : `<div style="width:80px;height:80px;border-radius:50%;background:var(--parch-mid);border:3px solid var(--parch-edge);display:flex;align-items:center;justify-content:center;font-family:'Noto Serif JP',serif;font-size:2rem;color:var(--ink-light);">${n.prenom[0]}</div>`;
-  const brises = faults.filter(f => f.type==='Brisé de traité');
-  const crimes = faults.filter(f => f.type==='Crime de guerre');
-  let html = `
-    <div style="display:flex;gap:16px;align-items:center;margin-bottom:1.5rem;padding-bottom:1.2rem;border-bottom:1px solid var(--parch-edge);">
-      ${avatar}
-      <div style="flex:1;">
-        <div style="font-family:'Cinzel',serif;font-size:1.2rem;margin-bottom:8px;">${n.prenom} ${n.nom}</div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;"><span class="grade-badge ${gc}">${n.grade}</span><span class="village-badge village-${n.village}">${n.village}</span></div>
-      </div>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:1.5rem;">
+  const n=db.ninjas.find(x=>x.id===ninjaId);
+  const faults=db.fautes.filter(f=>f.ninjaId===ninjaId);
+  const jugs=(db.jugements||[]).filter(j=>j.ninjaId===ninjaId);
+  const gc=gradeClass(n.grade);
+  document.getElementById('profil-title').textContent=`Profil — ${n.prenom} ${n.nom}`;
+  const avatar=n.photo
+    ?`<img src="${n.photo}" style="width:80px;height:80px;border-radius:50%;object-fit:cover;border:3px solid var(--parch-edge);" />`
+    :`<div style="width:80px;height:80px;border-radius:50%;background:var(--parch-mid);border:3px solid var(--parch-edge);display:flex;align-items:center;justify-content:center;font-family:'Noto Serif JP',serif;font-size:2rem;color:var(--ink-light);">${n.prenom[0]}</div>`;
+  const brises=faults.filter(f=>f.type==='Brisé de traité');
+  const crimes=faults.filter(f=>f.type==='Crime de guerre');
+  const newFaults=countNewFaultsSinceLastJugement(ninjaId);
+  let html=`<div style="display:flex;gap:16px;align-items:center;margin-bottom:1.5rem;padding-bottom:1.2rem;border-bottom:1px solid var(--parch-edge);">
+    ${avatar}<div style="flex:1;">
+      <div style="font-family:'Cinzel',serif;font-size:1.2rem;margin-bottom:8px;">${n.prenom} ${n.nom}</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;"><span class="grade-badge ${gc}">${n.grade}</span><span class="village-badge village-${n.village}">${n.village}</span></div>
+    </div></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;margin-bottom:1.5rem;">
       <div style="background:${brises.length>0?'#fff8e1':'rgba(184,149,90,0.08)'};border:1px solid ${brises.length>0?'#ffc107':'rgba(184,149,90,0.3)'};border-radius:3px;padding:0.8rem;text-align:center;">
         <div style="font-family:'Cinzel',serif;font-size:1.4rem;color:${brises.length>0?'#856404':'var(--ink-light)'};">${brises.length}</div>
-        <div style="font-size:0.72rem;color:var(--ink-fade);font-family:'Cinzel',serif;">Brisés de traité</div>
+        <div style="font-size:0.68rem;color:var(--ink-fade);font-family:'Cinzel',serif;">Brisés</div>
       </div>
       <div style="background:${crimes.length>0?'#fde8e8':'rgba(184,149,90,0.08)'};border:1px solid ${crimes.length>0?'var(--red-seal)':'rgba(184,149,90,0.3)'};border-radius:3px;padding:0.8rem;text-align:center;">
         <div style="font-family:'Cinzel',serif;font-size:1.4rem;color:${crimes.length>0?'var(--red-seal)':'var(--ink-light)'};">${crimes.length}</div>
-        <div style="font-size:0.72rem;color:var(--ink-fade);font-family:'Cinzel',serif;">Crimes de guerre</div>
+        <div style="font-size:0.68rem;color:var(--ink-fade);font-family:'Cinzel',serif;">Crimes</div>
+      </div>
+      <div style="background:${newFaults>=3?'#fde8e8':'rgba(184,149,90,0.08)'};border:1px solid ${newFaults>=3?'var(--red-seal)':'rgba(184,149,90,0.3)'};border-radius:3px;padding:0.8rem;text-align:center;">
+        <div style="font-family:'Cinzel',serif;font-size:1.4rem;color:${newFaults>=3?'var(--red-seal)':'var(--ink-light)'};">${newFaults}</div>
+        <div style="font-size:0.68rem;color:var(--ink-fade);font-family:'Cinzel',serif;">Nouv. fautes</div>
       </div>
       <div style="background:${jugs.length>0?'#fffbe6':'rgba(184,149,90,0.08)'};border:1px solid ${jugs.length>0?'var(--gold)':'rgba(184,149,90,0.3)'};border-radius:3px;padding:0.8rem;text-align:center;">
         <div style="font-family:'Cinzel',serif;font-size:1.4rem;color:${jugs.length>0?'var(--gold)':'var(--ink-light)'};">${jugs.length}</div>
-        <div style="font-size:0.72rem;color:var(--ink-fade);font-family:'Cinzel',serif;">Jugements</div>
+        <div style="font-size:0.68rem;color:var(--ink-fade);font-family:'Cinzel',serif;">Jugements</div>
       </div>
     </div>`;
   if (faults.length>0) {
-    html += `<div style="font-family:'Cinzel',serif;font-size:0.75rem;color:var(--ink-fade);letter-spacing:0.1em;margin-bottom:0.8rem;">FAUTES COMMISES</div>`;
-    faults.forEach(f => {
-      const tk = f.type==='Crime de guerre'?'Crime':'Brise';
-      html += `<div style="margin-bottom:0.6rem;padding:0.7rem;background:rgba(184,149,90,0.08);border-left:3px solid ${tk==='Crime'?'var(--red-seal)':'#ffc107'};border-radius:0 2px 2px 0;">
+    html+=`<div style="font-family:'Cinzel',serif;font-size:0.75rem;color:var(--ink-fade);letter-spacing:0.1em;margin-bottom:0.8rem;">FAUTES COMMISES</div>`;
+    faults.forEach(f=>{
+      const tk=f.type==='Crime de guerre'?'Crime':'Brise';
+      const payeLabel=f.paye==='oui'?'✓ Payée':'✗ Non payée';
+      const payeColor=f.paye==='oui'?'var(--konoha-green)':'var(--red-seal)';
+      html+=`<div style="margin-bottom:0.6rem;padding:0.7rem;background:rgba(184,149,90,0.08);border-left:3px solid ${tk==='Crime'?'var(--red-seal)':'#ffc107'};border-radius:0 2px 2px 0;cursor:pointer;" onclick="closeModal('modal-profil');openFauteDetail('${f.id}')">
         <div style="display:flex;gap:8px;align-items:center;margin-bottom:4px;flex-wrap:wrap;">
           <span class="fault-pill fault-${tk}">${f.type}</span>
           <span style="font-size:0.72rem;color:var(--ink-light);">${f.date} · ${f.village}</span>
+          <span style="font-size:0.72rem;font-family:'Cinzel',serif;color:${payeColor};">${payeLabel}</span>
         </div>
         <div style="font-size:0.82rem;font-style:italic;color:var(--ink-fade);">${f.details.substring(0,100)}${f.details.length>100?'…':''}</div>
       </div>`;
     });
   } else {
-    html += `<div style="text-align:center;padding:1rem;color:var(--ink-light);font-style:italic;font-size:0.88rem;">Aucune faute enregistrée.</div>`;
+    html+=`<div style="text-align:center;padding:1rem;color:var(--ink-light);font-style:italic;font-size:0.88rem;">Aucune faute enregistrée.</div>`;
   }
   if (jugs.length>0) {
-    html += `<div style="font-family:'Cinzel',serif;font-size:0.75rem;color:var(--ink-fade);letter-spacing:0.1em;margin:1rem 0 0.8rem;">JUGEMENTS</div>`;
-    jugs.forEach(j => {
-      const sc = j.statut==='en_attente'?'var(--gold)':'var(--konoha-green)';
-      const sl = j.statut==='en_attente'?'⚖ En attente':'✓ Clos';
-      html += `<div style="margin-bottom:0.6rem;padding:0.7rem;background:rgba(201,162,39,0.08);border-left:3px solid ${sc};border-radius:0 2px 2px 0;">
+    html+=`<div style="font-family:'Cinzel',serif;font-size:0.75rem;color:var(--ink-fade);letter-spacing:0.1em;margin:1rem 0 0.8rem;">JUGEMENTS</div>`;
+    jugs.forEach(j=>{
+      const sc=j.statut==='en_attente'?'var(--gold)':'var(--konoha-green)';
+      const sl=j.statut==='en_attente'?'⚖ En attente':'✓ Clos';
+      html+=`<div style="margin-bottom:0.6rem;padding:0.7rem;background:rgba(201,162,39,0.08);border-left:3px solid ${sc};border-radius:0 2px 2px 0;">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;flex-wrap:wrap;gap:4px;">
           <span style="font-size:0.72rem;color:var(--ink-light);">Jugement du ${j.date}</span>
           <span style="font-family:'Cinzel',serif;font-size:0.7rem;color:${sc};">${sl}</span>
@@ -1200,152 +1263,133 @@ function openProfil(ninjaId) {
       </div>`;
     });
   }
-  document.getElementById('profil-content').innerHTML = html;
+  document.getElementById('profil-content').innerHTML=html;
   document.getElementById('modal-profil').classList.add('open');
 }
 
 // TRESORERIE
 function openTxModal(mode) {
   if (!canManageTreasury()) { alert('Votre grade ne permet pas cette action.'); return; }
-  txMode = mode;
-  document.getElementById('tx-modal-title').textContent = mode==='add'?'+ Ajout de fonds':'− Retrait de fonds';
+  txMode=mode;
+  document.getElementById('tx-modal-title').textContent=mode==='add'?'+ Ajout de fonds':'− Retrait de fonds';
   document.getElementById('tx-amount').value='';
   document.getElementById('tx-detail').value='';
   document.getElementById('modal-tx').classList.add('open');
 }
 function confirmTx() {
-  const amount = parseInt(document.getElementById('tx-amount').value);
-  const detail = document.getElementById('tx-detail').value.trim();
+  const amount=parseInt(document.getElementById('tx-amount').value);
+  const detail=document.getElementById('tx-detail').value.trim();
   if (!amount||amount<=0) { alert('Montant invalide.'); return; }
   if (!detail) { alert('Veuillez ajouter un motif.'); return; }
   if (txMode==='remove'&&amount>db.balance) { alert('Fonds insuffisants.'); return; }
-  db.balance += (txMode==='add'?1:-1)*amount;
+  db.balance+=(txMode==='add'?1:-1)*amount;
   db.transactions.unshift({id:'t'+Date.now(),mode:txMode,amount,detail,
     date:new Date().toLocaleDateString('fr-FR'),author:currentUser.username});
+  logAction('treasury_tx',`${txMode==='add'?'Ajout':'Retrait'} trésorerie : ${amount} Ryō — ${detail}`,{mode:txMode,amount});
   closeModal('modal-tx'); refreshTreasury(); scheduleSave();
 }
 function refreshTreasury() {
-  document.getElementById('treasury-btns').style.display = canManageTreasury()?'':'none';
-  document.getElementById('balance-display').textContent = db.balance.toLocaleString('fr-FR')+' Ryō';
-  const list = document.getElementById('tx-list');
-  const empty = document.getElementById('tx-empty');
+  document.getElementById('treasury-btns').style.display=canManageTreasury()?'':'none';
+  document.getElementById('balance-display').textContent=db.balance.toLocaleString('fr-FR')+' Ryō';
+  const list=document.getElementById('tx-list');
+  const empty=document.getElementById('tx-empty');
   list.innerHTML='';
   if (db.transactions.length===0) { empty.style.display='block'; return; }
   empty.style.display='none';
-  db.transactions.forEach(tx => {
-    const div = document.createElement('div'); div.className='tx-row';
-    div.innerHTML = `<div class="tx-sign ${tx.mode==='add'?'plus':'minus'}">${tx.mode==='add'?'+':'−'}</div>
+  db.transactions.forEach(tx=>{
+    const div=document.createElement('div'); div.className='tx-row';
+    div.innerHTML=`<div class="tx-sign ${tx.mode==='add'?'plus':'minus'}">${tx.mode==='add'?'+':'−'}</div>
       <div class="tx-detail-col"><div>${tx.detail}</div><div class="tx-meta">${tx.date} · par ${tx.author}</div></div>
       <div class="tx-amount ${tx.mode==='add'?'plus':'minus'}">${tx.mode==='add'?'+':'−'}${tx.amount.toLocaleString('fr-FR')} Ryō</div>`;
     list.appendChild(div);
   });
 }
 
-// ─── DETTES ──────────────────────────────────────────────────
+// DETTES
 function toggleDetteNinja() {
-  const val = document.querySelector('input[name="dette-debitor"]:checked')?.value;
-  document.getElementById('dette-ninja-select').style.display = val==='ninja'?'':'none';
+  const val=document.querySelector('input[name="dette-debitor"]:checked')?.value;
+  document.getElementById('dette-ninja-select').style.display=val==='ninja'?'':'none';
 }
-
 function calculerMontantActuel(dette) {
-  const now = Date.now();
-  const created = new Date(dette.date).getTime();
-  const msElapsed = now - created;
-  const daysPassed = Math.floor(msElapsed / (1000*60*60*24));
-  const cycles = Math.floor(daysPassed / 7);
-  let montant = dette.montantInitial;
-  for (let i=0; i<cycles; i++) montant = Math.round(montant * 1.20);
-  return { montant, cycles, daysPassed };
+  const now=Date.now();
+  const created=new Date(dette.date).getTime();
+  const msElapsed=now-created;
+  const daysPassed=Math.floor(msElapsed/(1000*60*60*24));
+  const cycles=Math.floor(daysPassed/7);
+  let montant=dette.montantInitial;
+  for(let i=0;i<cycles;i++) montant=Math.round(montant*1.20);
+  return{montant,cycles,daysPassed};
 }
-
 function joursAvantMajoration(dette) {
-  const now = Date.now();
-  const created = new Date(dette.date).getTime();
-  const msElapsed = now - created;
-  const daysPassed = msElapsed / (1000*60*60*24);
-  const cyclePos = daysPassed % 7;
-  return Math.ceil(7 - cyclePos);
+  const now=Date.now();
+  const created=new Date(dette.date).getTime();
+  const msElapsed=now-created;
+  const daysPassed=msElapsed/(1000*60*60*24);
+  const cyclePos=daysPassed%7;
+  return Math.ceil(7-cyclePos);
 }
-
 function addDette() {
   if (!canManageDettes()) { alert('Accès non autorisé.'); return; }
-  const debitorType = document.querySelector('input[name="dette-debitor"]:checked')?.value;
-  const creancier = document.querySelector('input[name="dette-creancier"]:checked')?.value;
-  const montant = parseInt(document.getElementById('d-montant').value);
-  const date = document.getElementById('d-date').value;
-  const motif = document.getElementById('d-motif').value.trim();
-  let ninjaId = null;
+  const debitorType=document.querySelector('input[name="dette-debitor"]:checked')?.value;
+  const creancier=document.querySelector('input[name="dette-creancier"]:checked')?.value;
+  const montant=parseInt(document.getElementById('d-montant').value);
+  const date=document.getElementById('d-date').value;
+  const motif=document.getElementById('d-motif').value.trim();
+  let ninjaId=null;
   if (debitorType==='ninja') {
-    ninjaId = document.getElementById('d-ninja').value;
+    ninjaId=document.getElementById('d-ninja').value;
     if (!ninjaId) { alert('Sélectionnez un ninja.'); return; }
   }
   if (!montant||montant<=0) { alert('Montant invalide.'); return; }
   if (!date) { alert('Veuillez indiquer une date.'); return; }
   if (!motif) { alert('Veuillez indiquer le motif.'); return; }
   if (!db.dettes) db.dettes=[];
-  db.dettes.push({
-    id:'d'+Date.now(), debitor:debitorType, ninjaId, creancier,
-    montantInitial:montant, date, motif, paye:false,
-    author:currentUser.username, createdAt:new Date().toLocaleDateString('fr-FR')
-  });
+  const dette={id:'d'+Date.now(),debitor:debitorType,ninjaId,creancier,
+    montantInitial:montant,date,motif,paye:false,
+    author:currentUser.username,createdAt:new Date().toLocaleDateString('fr-FR')};
+  db.dettes.push(dette);
+  logAction('dette_add',`Dette enregistrée : ${debitorType} → ${creancier} — ${montant} Ryō`,{detteId:dette.id,montant});
   document.getElementById('d-montant').value='';
   document.getElementById('d-motif').value='';
   document.getElementById('d-date').value=new Date().toISOString().split('T')[0];
   refreshDettes(); updateBadge(); scheduleSave();
 }
-
 function refreshDettes() {
   if (!db.dettes) db.dettes=[];
-  const list = document.getElementById('dette-list');
-  const empty = document.getElementById('dette-empty');
-  const banner = document.getElementById('dette-alert-banner');
-  const bannerContent = document.getElementById('dette-alert-content');
-
-  document.getElementById('dette-add-section').style.display = canManageDettes()?'':'none';
-
-  const actives = db.dettes.filter(d => !d.paye);
-  const payees = db.dettes.filter(d => d.paye);
-
-  // Alertes majoration imminente pour Konoha (≤2 jours)
-  const now = Date.now();
-  const imminentes = actives.filter(d => {
-    const isKonoha = d.debitor==='Konoha';
-    if (!isKonoha) return false;
-    return joursAvantMajoration(d) <= 2;
-  });
-
+  const list=document.getElementById('dette-list');
+  const empty=document.getElementById('dette-empty');
+  const banner=document.getElementById('dette-alert-banner');
+  const bannerContent=document.getElementById('dette-alert-content');
+  document.getElementById('dette-add-section').style.display=canManageDettes()?'':'none';
+  const actives=db.dettes.filter(d=>!d.paye);
+  const payees=db.dettes.filter(d=>d.paye);
+  const imminentes=actives.filter(d=>d.debitor==='Konoha'&&joursAvantMajoration(d)<=2);
   if (imminentes.length>0) {
     banner.classList.add('visible');
-    bannerContent.innerHTML = imminentes.map(d => {
-      const { montant } = calculerMontantActuel(d);
-      const jours = joursAvantMajoration(d);
-      return `→ Dette Konoha envers ${d.creancier} : <strong>${montant.toLocaleString('fr-FR')} Ryō</strong> — majoration dans <strong>${jours} jour(s)</strong>`;
+    bannerContent.innerHTML=imminentes.map(d=>{
+      const{montant}=calculerMontantActuel(d);
+      const jours=joursAvantMajoration(d);
+      return`→ Dette Konoha envers ${d.creancier} : <strong>${montant.toLocaleString('fr-FR')} Ryō</strong> — majoration dans <strong>${jours} jour(s)</strong>`;
     }).join('<br/>');
-  } else {
-    banner.classList.remove('visible');
-  }
-
+  } else banner.classList.remove('visible');
   list.innerHTML='';
-  if (actives.length===0 && payees.length===0) { empty.style.display='block'; return; }
+  if (actives.length===0&&payees.length===0) { empty.style.display='block'; return; }
   empty.style.display='none';
-
   if (actives.length>0) {
-    list.innerHTML += `<div style="font-family:'Cinzel',serif;font-size:0.78rem;color:var(--ink-fade);letter-spacing:0.1em;margin-bottom:1rem;">DETTES ACTIVES (${actives.length})</div>`;
-    actives.forEach(d => {
-      const { montant, cycles, daysPassed } = calculerMontantActuel(d);
-      const jours = joursAvantMajoration(d);
-      const progressPct = Math.min(100, Math.round(((7 - jours) / 7) * 100));
-      const isKonoha = d.debitor==='Konoha';
-      const isUrgent = isKonoha && jours <= 2;
-      const isWarning = isKonoha && jours <= 4 && !isUrgent;
-      let debitorLabel = d.debitor==='ninja'
-        ? (() => { const n=db.ninjas.find(x=>x.id===d.ninjaId); return n?`${n.prenom} ${n.nom}`:('Ninja inconnu'); })()
-        : d.debitor;
-
-      const div = document.createElement('div');
-      div.className = 'dette-card'+(isUrgent?' urgent':isWarning?' warning':'');
-      div.innerHTML = `
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:1rem;">
+    list.innerHTML+=`<div style="font-family:'Cinzel',serif;font-size:0.78rem;color:var(--ink-fade);letter-spacing:0.1em;margin-bottom:1rem;">DETTES ACTIVES (${actives.length})</div>`;
+    actives.forEach(d=>{
+      const{montant,cycles}=calculerMontantActuel(d);
+      const jours=joursAvantMajoration(d);
+      const progressPct=Math.min(100,Math.round(((7-jours)/7)*100));
+      const isKonoha=d.debitor==='Konoha';
+      const isUrgent=isKonoha&&jours<=2;
+      const isWarning=isKonoha&&jours<=4&&!isUrgent;
+      let debitorLabel=d.debitor==='ninja'
+        ?(()=>{const n=db.ninjas.find(x=>x.id===d.ninjaId);return n?`${n.prenom} ${n.nom}`:'Ninja inconnu';})()
+        :d.debitor;
+      const div=document.createElement('div');
+      div.className='dette-card'+(isUrgent?' urgent':isWarning?' warning':'');
+      div.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:1rem;">
           <div>
             <div style="font-family:'Cinzel',serif;font-size:0.88rem;margin-bottom:4px;">
               <span style="color:var(--red-seal);">${debitorLabel}</span>
@@ -1356,45 +1400,37 @@ function refreshDettes() {
           </div>
           <div style="text-align:right;">
             <div style="font-family:'Cinzel',serif;font-size:1.3rem;color:${isUrgent?'var(--red-seal)':isWarning?'var(--gold)':'var(--ink)'};">${montant.toLocaleString('fr-FR')} Ryō</div>
-            ${cycles>0?`<div style="font-size:0.72rem;color:var(--red-seal);font-style:italic;">+${cycles}× majoré de 20% (initial: ${d.montantInitial.toLocaleString('fr-FR')} Ryō)</div>`:`<div style="font-size:0.72rem;color:var(--ink-light);font-style:italic;">Montant initial</div>`}
+            ${cycles>0?`<div style="font-size:0.72rem;color:var(--red-seal);font-style:italic;">+${cycles}× majoré 20% (initial: ${d.montantInitial.toLocaleString('fr-FR')} Ryō)</div>`:`<div style="font-size:0.72rem;color:var(--ink-light);font-style:italic;">Montant initial</div>`}
           </div>
         </div>
         <div style="font-size:0.83rem;color:var(--ink-fade);font-style:italic;margin-bottom:0.8rem;">${d.motif}</div>
-        ${isKonoha ? `
-        <div style="margin-bottom:0.8rem;">
+        ${isKonoha?`<div style="margin-bottom:0.8rem;">
           <div style="display:flex;justify-content:space-between;font-size:0.72rem;color:var(--ink-light);margin-bottom:4px;">
             <span>Prochaine majoration</span>
             <span style="color:${isUrgent?'var(--red-seal)':isWarning?'var(--gold)':'var(--ink-light)'};">${jours} jour(s)</span>
           </div>
-          <div class="progress-bar-wrap">
-            <div class="progress-bar" style="width:${progressPct}%;background:${isUrgent?'var(--red-seal)':isWarning?'var(--gold)':'var(--konoha-green)'};"></div>
-          </div>
-        </div>` : ''}
+          <div class="progress-bar-wrap"><div class="progress-bar" style="width:${progressPct}%;background:${isUrgent?'var(--red-seal)':isWarning?'var(--gold)':'var(--konoha-green)'};"></div></div>
+        </div>`:''}
         ${canManageDettes()?`<div class="flex-end"><button class="btn btn-success btn-sm" onclick="ouvrirConfirmPaye('${d.id}','${debitorLabel}',${montant})">✓ Marquer comme payée</button></div>`:''}`;
       list.appendChild(div);
     });
   }
-
   if (payees.length>0) {
-    const sep = document.createElement('div');
-    sep.style.cssText = 'height:1px;background:var(--parch-edge);opacity:0.4;margin:1.5rem 0;';
+    const sep=document.createElement('div');
+    sep.style.cssText='height:1px;background:var(--parch-edge);opacity:0.4;margin:1.5rem 0;';
     list.appendChild(sep);
-    const label = document.createElement('div');
-    label.style.cssText = "font-family:'Cinzel',serif;font-size:0.78rem;color:var(--ink-fade);letter-spacing:0.1em;margin-bottom:1rem;";
-    label.textContent = `DETTES REMBOURSÉES (${payees.length})`;
-    list.appendChild(label);
-    payees.forEach(d => {
-      const debitorLabel = d.debitor==='ninja'
-        ? (() => { const n=db.ninjas.find(x=>x.id===d.ninjaId); return n?`${n.prenom} ${n.nom}`:'Ninja inconnu'; })()
-        : d.debitor;
-      const div = document.createElement('div');
-      div.style.cssText = 'background:rgba(26,74,26,0.05);border:1px solid rgba(45,107,45,0.3);border-radius:3px;padding:1rem 1.5rem;margin-bottom:0.8rem;opacity:0.75;';
-      div.innerHTML = `
-        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
-          <div>
-            <span style="font-family:'Cinzel',serif;font-size:0.88rem;">${debitorLabel} → ${d.creancier}</span>
-            <span style="font-size:0.75rem;color:var(--ink-light);font-style:italic;margin-left:8px;">${d.createdAt}</span>
-          </div>
+    const lbl=document.createElement('div');
+    lbl.style.cssText="font-family:'Cinzel',serif;font-size:0.78rem;color:var(--ink-fade);letter-spacing:0.1em;margin-bottom:1rem;";
+    lbl.textContent=`DETTES REMBOURSÉES (${payees.length})`;
+    list.appendChild(lbl);
+    payees.forEach(d=>{
+      const debitorLabel=d.debitor==='ninja'
+        ?(()=>{const n=db.ninjas.find(x=>x.id===d.ninjaId);return n?`${n.prenom} ${n.nom}`:'Ninja inconnu';})()
+        :d.debitor;
+      const div=document.createElement('div');
+      div.style.cssText='background:rgba(26,74,26,0.05);border:1px solid rgba(45,107,45,0.3);border-radius:3px;padding:1rem 1.5rem;margin-bottom:0.8rem;opacity:0.75;';
+      div.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+          <div><span style="font-family:'Cinzel',serif;font-size:0.88rem;">${debitorLabel} → ${d.creancier}</span><span style="font-size:0.75rem;color:var(--ink-light);font-style:italic;margin-left:8px;">${d.createdAt}</span></div>
           <span style="font-size:0.72rem;color:var(--konoha-green);font-family:'Cinzel',serif;">✓ Remboursée</span>
         </div>
         <div style="font-size:0.82rem;color:var(--ink-fade);margin-top:4px;font-style:italic;">${d.motif} · ${d.montantInitial.toLocaleString('fr-FR')} Ryō initial</div>`;
@@ -1402,85 +1438,150 @@ function refreshDettes() {
     });
   }
 }
-
-function ouvrirConfirmPaye(detteId, debitorLabel, montant) {
-  dettePayeId = detteId;
-  document.getElementById('confirm-paye-info').innerHTML =
-    `Confirmez-vous le remboursement de la dette de <strong>${debitorLabel}</strong> pour un montant de <strong>${montant.toLocaleString('fr-FR')} Ryō</strong> ?`;
+function ouvrirConfirmPaye(detteId,debitorLabel,montant) {
+  dettePayeId=detteId;
+  document.getElementById('confirm-paye-info').innerHTML=`Confirmez-vous le remboursement de la dette de <strong>${debitorLabel}</strong> pour un montant de <strong>${montant.toLocaleString('fr-FR')} Ryō</strong> ?`;
   document.getElementById('confirm-paye').classList.add('open');
 }
-function closeConfirmPaye() {
-  dettePayeId = null;
-  document.getElementById('confirm-paye').classList.remove('open');
-}
+function closeConfirmPaye() { dettePayeId=null; document.getElementById('confirm-paye').classList.remove('open'); }
 function confirmerPaye() {
   if (!db.dettes||!dettePayeId) return;
-  const d = db.dettes.find(x => x.id===dettePayeId);
-  if (d) d.paye=true;
-  closeConfirmPaye();
-  refreshDettes(); updateBadge(); scheduleSave();
+  const d=db.dettes.find(x=>x.id===dettePayeId);
+  if (d) { d.paye=true; logAction('dette_paye',`Dette marquée payée : ${d.debitor} → ${d.creancier}`,{detteId:dettePayeId}); }
+  closeConfirmPaye(); refreshDettes(); updateBadge(); scheduleSave();
 }
 
-// COMPTES
+// COMPTES — admin AND gérant can manage
 function refreshComptes() {
-  const cont = document.getElementById('comptes-content');
+  const cont=document.getElementById('comptes-content');
   if (!canManageUsers()) {
-    cont.innerHTML = `<div class="access-denied"><div style="font-family:'Cinzel',serif;font-size:1.1rem;">⊗ Accès Restreint</div><p>Seul l'Administrateur peut gérer les comptes diplomatiques.</p></div>`;
+    cont.innerHTML=`<div class="access-denied"><div style="font-family:'Cinzel',serif;font-size:1.1rem;">⊗ Accès Restreint</div><p>Seuls l'Administrateur et les Gérants peuvent gérer les comptes diplomatiques.</p></div>`;
     return;
   }
-  let html = `<table><thead><tr><th>Identifiant</th><th>Grade</th><th>Statut</th><th>Actions</th></tr></thead><tbody>`;
-  db.users.forEach(u => {
-    const status = u.approved
-      ? `<span style="color:var(--konoha-green);font-size:0.8rem;">✓ Actif</span>`
-      : `<span style="color:var(--red-seal);font-size:0.8rem;">En attente</span>`;
-    const actions = u.id!=='u0'
-      ? `<div style="display:flex;gap:6px;"><button class="btn btn-ghost btn-sm" onclick="openRoleModal('${u.id}','${u.username}')">Grade</button>${!u.approved?`<button class="btn btn-success btn-sm" onclick="approveUser('${u.id}')">Valider</button>`:''}</div>`
-      : `<span style="font-size:0.75rem;color:var(--ink-fade);">Compte système</span>`;
-    html += `<tr><td>${u.username}</td><td><span class="role-${u.role}">${ROLES[u.role]||u.role}</span></td><td>${status}</td><td>${actions}</td></tr>`;
+  let html=`<table><thead><tr><th>Identifiant</th><th>Grade</th><th>Statut</th><th>Actions</th></tr></thead><tbody>`;
+  db.users.forEach(u=>{
+    const isSystemAdmin=u.id==='u0';
+    const status=u.approved
+      ?`<span style="color:var(--konoha-green);font-size:0.8rem;">✓ Actif</span>`
+      :`<span style="color:var(--red-seal);font-size:0.8rem;">En attente</span>`;
+    // gérant cannot promote to admin, cannot edit other admins
+    const canEdit=!isSystemAdmin&&!(u.role==='admin'&&currentUser.role==='gerant');
+    const actions=canEdit
+      ?`<div style="display:flex;gap:6px;flex-wrap:wrap;">
+          <button class="btn btn-ghost btn-sm" onclick="openCasier('${u.id}','${u.username}')">📋 Casier</button>
+          <button class="btn btn-ghost btn-sm" onclick="openRoleModal('${u.id}','${u.username}')">Grade</button>
+          ${!u.approved?`<button class="btn btn-success btn-sm" onclick="approveUser('${u.id}')">✓ Valider</button>`:''}
+        </div>`
+      :`<div style="display:flex;gap:6px;"><button class="btn btn-ghost btn-sm" onclick="openCasier('${u.id}','${u.username}')">📋 Casier</button><span style="font-size:0.75rem;color:var(--ink-fade);">Compte protégé</span></div>`;
+    html+=`<tr><td>${u.username}</td><td><span class="role-${u.role}">${ROLES[u.role]||u.role}</span></td><td>${status}</td><td>${actions}</td></tr>`;
   });
-  html += `</tbody></table>`;
-  cont.innerHTML = html;
+  html+=`</tbody></table>`;
+  cont.innerHTML=html;
 }
+
 function approveUser(id) {
-  const u = db.users.find(x => x.id===id); if (u) u.approved=true;
+  if (!canManageUsers()) return;
+  const u=db.users.find(x=>x.id===id);
+  if (u) { u.approved=true; logAction('user_approve',`Compte validé : ${u.username}`,{userId:id}); }
   refreshComptes(); scheduleSave();
 }
-function openRoleModal(id, username) {
-  roleTargetId = id;
-  document.getElementById('role-username').textContent = 'Shinobi : '+username;
-  const u = db.users.find(x => x.id===id);
-  if (u) document.getElementById('role-select').value = u.role;
+
+function openRoleModal(id,username) {
+  if (!canManageUsers()) return;
+  roleTargetId=id;
+  document.getElementById('role-username').textContent='Shinobi : '+username;
+  const u=db.users.find(x=>x.id===id);
+  if (u) document.getElementById('role-select').value=u.role;
+  // gérant cannot assign admin role
+  const sel=document.getElementById('role-select');
+  [...sel.options].forEach(o=>{ o.disabled=(o.value==='admin'&&currentUser.role==='gerant'); });
   document.getElementById('modal-role').classList.add('open');
 }
+
 function confirmRole() {
-  const newRole = document.getElementById('role-select').value;
-  const u = db.users.find(x => x.id===roleTargetId);
-  if (u) u.role=newRole;
+  const newRole=document.getElementById('role-select').value;
+  const u=db.users.find(x=>x.id===roleTargetId);
+  if (u) { logAction('user_role',`Grade changé pour ${u.username} : ${u.role} → ${newRole}`,{userId:roleTargetId,oldRole:u.role,newRole}); u.role=newRole; }
   closeModal('modal-role'); refreshComptes(); scheduleSave();
 }
 
+// CASIER
+function openCasier(userId,username) {
+  if (!canManageUsers()) return;
+  document.getElementById('casier-title').textContent=`Casier — ${username}`;
+  const logs=(db.actionLog||[]).filter(l=>l.authorId===userId||l.author===username);
+  const content=document.getElementById('casier-content');
+  if (logs.length===0) {
+    content.innerHTML=`<div class="empty-state">Aucune action enregistrée pour ce compte.</div>`;
+    document.getElementById('modal-casier').classList.add('open');
+    return;
+  }
+  // Summary stats
+  const fautesAdded=logs.filter(l=>l.type==='faute_add').length;
+  const ninjasAdded=logs.filter(l=>l.type==='ninja_add').length;
+  const jugements=logs.filter(l=>l.type==='jugement_create').length;
+  const txCount=logs.filter(l=>l.type==='treasury_tx').length;
+  const html=`
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-bottom:1.5rem;padding-bottom:1rem;border-bottom:1px solid var(--parch-edge);">
+      <div style="background:rgba(184,149,90,0.1);border-radius:3px;padding:0.7rem;text-align:center;">
+        <div style="font-family:'Cinzel',serif;font-size:1.3rem;color:var(--red-seal);">${fautesAdded}</div>
+        <div style="font-size:0.68rem;color:var(--ink-fade);font-family:'Cinzel',serif;">Fautes ajoutées</div>
+      </div>
+      <div style="background:rgba(184,149,90,0.1);border-radius:3px;padding:0.7rem;text-align:center;">
+        <div style="font-family:'Cinzel',serif;font-size:1.3rem;color:var(--konoha-green);">${ninjasAdded}</div>
+        <div style="font-size:0.68rem;color:var(--ink-fade);font-family:'Cinzel',serif;">Ninjas ajoutés</div>
+      </div>
+      <div style="background:rgba(184,149,90,0.1);border-radius:3px;padding:0.7rem;text-align:center;">
+        <div style="font-family:'Cinzel',serif;font-size:1.3rem;color:var(--gold);">${jugements}</div>
+        <div style="font-size:0.68rem;color:var(--ink-fade);font-family:'Cinzel',serif;">Jugements</div>
+      </div>
+      <div style="background:rgba(184,149,90,0.1);border-radius:3px;padding:0.7rem;text-align:center;">
+        <div style="font-family:'Cinzel',serif;font-size:1.3rem;color:var(--ink);">${txCount}</div>
+        <div style="font-size:0.68rem;color:var(--ink-fade);font-family:'Cinzel',serif;">Transactions</div>
+      </div>
+    </div>
+    <div style="font-family:'Cinzel',serif;font-size:0.72rem;color:var(--ink-fade);letter-spacing:0.1em;margin-bottom:0.8rem;">HISTORIQUE COMPLET (${logs.length} action${logs.length>1?'s':''})</div>
+    <div style="max-height:360px;overflow-y:auto;border:1px solid rgba(184,149,90,0.3);border-radius:3px;background:rgba(255,255,255,0.3);">
+      ${logs.map(l=>{
+        const icons={faute_add:'⚠',faute_delete:'🗑',ninja_add:'👤',ninja_delete:'✕',jugement_create:'⚖',jugement_clos:'✓',jugement_edit:'✏',jugement_delete:'🗑',treasury_tx:'💰',dette_add:'📜',dette_paye:'✓',user_approve:'✓',user_role:'🔑',default:'•'};
+        const icon=icons[l.type]||icons.default;
+        const colors={faute_add:'var(--red-seal)',faute_delete:'var(--red-seal)',ninja_add:'var(--konoha-green)',ninja_delete:'var(--red-seal)',jugement_create:'var(--gold)',jugement_clos:'var(--konoha-green)',jugement_edit:'var(--ink-fade)',treasury_tx:'var(--gold)',dette_add:'var(--ink-fade)',dette_paye:'var(--konoha-green)',user_approve:'var(--konoha-green)',user_role:'var(--gold)',default:'var(--ink-fade)'};
+        const color=colors[l.type]||colors.default;
+        return`<div class="casier-action">
+          <div class="casier-icon" style="color:${color};">${icon}</div>
+          <div class="casier-detail">${l.description}<div class="casier-meta">${l.date}</div></div>
+        </div>`;
+      }).join('')}
+    </div>`;
+  content.innerHTML=html;
+  document.getElementById('modal-casier').classList.add('open');
+}
+
 // MODALS
-function closeModal(id) { document.getElementById(id).classList.remove('open'); }
-document.querySelectorAll('.modal-overlay').forEach(m => {
-  m.addEventListener('click', e => { if (e.target===m) { m.classList.remove('open'); editJugementId=null; } });
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+  if (id==='modal-edit-jugement') editJugementId=null;
+}
+document.querySelectorAll('.modal-overlay').forEach(m=>{
+  m.addEventListener('click',e=>{ if(e.target===m){m.classList.remove('open'); editJugementId=null;} });
 });
-document.getElementById('confirm-paye').addEventListener('click', e => {
-  if (e.target===document.getElementById('confirm-paye')) closeConfirmPaye();
+document.getElementById('confirm-paye').addEventListener('click',e=>{
+  if(e.target===document.getElementById('confirm-paye')) closeConfirmPaye();
 });
 
-Object.assign(window, {
-  showLogin, showRegister, doLogin, doRegister, doLogout,
-  switchPage, previewPhoto, clearPhoto,
-  addNinja, deleteNinja, refreshNinjas,
-  addFaute, deleteFaute,
-  openDossier, envoyerJugement, confirmJugement,
-  cloturerJugement, ouvrirEditJugement, sauvegarderJugement,
-  supprimerJugement, openProfil,
-  openTxModal, confirmTx,
-  toggleDetteNinja, addDette, ouvrirConfirmPaye,
-  closeConfirmPaye, confirmerPaye,
-  approveUser, openRoleModal, confirmRole,
-  closeModal
+Object.assign(window,{
+  showLogin,showRegister,doLogin,doRegister,doLogout,
+  switchPage,previewPhoto,clearPhoto,
+  addNinja,deleteNinja,refreshNinjas,
+  addFaute,deleteFaute,openFauteDetail,
+  openDossier,envoyerJugement,confirmJugement,
+  cloturerJugement,ouvrirEditJugement,sauvegarderJugement,
+  supprimerJugement,openProfil,
+  openTxModal,confirmTx,
+  toggleDetteNinja,addDette,ouvrirConfirmPaye,
+  closeConfirmPaye,confirmerPaye,
+  approveUser,openRoleModal,confirmRole,
+  openCasier,closeModal
 });
 
 loadDB();
