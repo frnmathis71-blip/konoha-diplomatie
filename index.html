@@ -192,6 +192,7 @@
       <button class="nav-btn active" id="nav-ninjas" onclick="switchPage('ninjas')">Ninjas</button>
       <button class="nav-btn" id="nav-fautes" onclick="switchPage('fautes')">Fautes</button>
       <button class="nav-btn" id="nav-alertes" onclick="switchPage('alertes')">Alertes<span class="alert-badge" id="alert-badge" style="display:none;">0</span></button>
+      <button class="nav-btn" id="nav-jugements" onclick="switchPage('jugements')">Jugements<span class="alert-badge" id="jugement-badge" style="display:none;background:#5c3d1e;">0</span></button>
       <button class="nav-btn" id="nav-tresorerie" onclick="switchPage('tresorerie')">Trésorerie</button>
       <button class="nav-btn" id="nav-comptes" onclick="switchPage('comptes')">Comptes</button>
     </div>
@@ -242,7 +243,7 @@
       </div>
       <div class="scroll-table">
         <table>
-          <thead><tr><th>Photo</th><th>Prénom</th><th>Nom</th><th>Grade</th><th>Village</th><th>Fautes</th><th></th></tr></thead>
+          <thead><tr><th>Photo</th><th>Prénom</th><th>Nom</th><th>Grade</th><th>Village</th><th>Fautes</th><th>Profil</th><th></th></tr></thead>
           <tbody id="ninja-tbody"></tbody>
         </table>
       </div>
@@ -291,6 +292,14 @@
     </div>
   </div>
 
+  <div id="page-jugements" class="page">
+    <div class="parchment">
+      <div class="parchment-title"><span class="kana">裁判</span> Chambre des Jugements</div>
+      <div id="jugement-list"></div>
+      <div id="jugement-empty" class="empty-state">Aucun dossier en jugement.</div>
+    </div>
+  </div>
+
   <div id="page-tresorerie" class="page">
     <div class="parchment">
       <div class="parchment-title"><span class="kana">財務</span> Trésorerie Diplomatique</div>
@@ -321,10 +330,39 @@
 
 <!-- MODALS -->
 <div class="modal-overlay" id="modal-dossier">
-  <div class="modal-box">
+  <div class="modal-box" style="max-width:600px;">
     <button class="modal-close" onclick="closeModal('modal-dossier')">✕</button>
     <div class="modal-title" id="dossier-title">Dossier</div>
     <div id="dossier-content"></div>
+    <div id="dossier-actions" class="flex-end mt-1" style="border-top:1px solid var(--parch-edge);padding-top:1rem;margin-top:1rem;"></div>
+  </div>
+</div>
+
+<!-- Modal jugement : fixer date + résultat -->
+<div class="modal-overlay" id="modal-jugement">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeModal('modal-jugement')">✕</button>
+    <div class="modal-title" id="jugement-modal-title">Enregistrer le Jugement</div>
+    <div id="jugement-ninja-info" style="font-family:'Cinzel',serif;color:var(--ink-fade);font-size:0.85rem;margin-bottom:1.2rem;"></div>
+    <label>Date du jugement</label>
+    <input type="text" id="j-date" placeholder="Ex: 26/04/2026" />
+    <label>Peine / Résultat</label>
+    <textarea id="j-peine" placeholder="Ex: Bannissement, emprisonnement, amende, acquittement..." style="min-height:100px;"></textarea>
+    <label>Notes supplémentaires <span style="font-weight:400;font-style:italic;font-size:0.75rem;">(optionnel)</span></label>
+    <textarea id="j-notes" placeholder="Circonstances atténuantes, conditions..."></textarea>
+    <div class="flex-end mt-1">
+      <button class="btn btn-ghost" onclick="closeModal('modal-jugement')">Annuler</button>
+      <button class="btn btn-primary" onclick="confirmJugement()">Sceller le Jugement</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal profil ninja -->
+<div class="modal-overlay" id="modal-profil">
+  <div class="modal-box" style="max-width:620px;">
+    <button class="modal-close" onclick="closeModal('modal-profil')">✕</button>
+    <div class="modal-title" id="profil-title">Profil</div>
+    <div id="profil-content"></div>
   </div>
 </div>
 <div class="modal-overlay" id="modal-tx">
@@ -373,7 +411,7 @@ const ROLES = {
 };
 const DEFAULT_DB = {
   users:[{id:'u0',username:'admin',password:'admin123',role:'admin',approved:true}],
-  ninjas:[],fautes:[],transactions:[],balance:0
+  ninjas:[],fautes:[],jugements:[],transactions:[],balance:0
 };
 
 let db = JSON.parse(JSON.stringify(DEFAULT_DB));
@@ -382,6 +420,7 @@ let txMode = 'add';
 let roleTargetId = null;
 let pendingPhoto = null;
 let saveTimeout = null;
+let jugementTargetNinjaId = null;
 
 // ─── Cache localStorage pour accès instantané ───────────────
 const LS_KEY = 'konoha_db_cache';
@@ -432,6 +471,8 @@ async function fetchRemoteDB() {
 
     if (data && Array.isArray(data.users)) {
       db = data;
+      // Compatibilité : ajouter jugements si absent (anciennes données)
+      if (!Array.isArray(db.jugements)) db.jugements = [];
       cacheWrite(db);
       setDbStatus('ok', 'Archives synchronisées ✓');
       // Si l'utilisateur est déjà connecté, on rafraîchit l'affichage
@@ -571,12 +612,13 @@ function switchPage(page) {
   if (page==='ninjas')     refreshNinjas();
   if (page==='fautes')     { refreshNinjaSelect(); refreshFautes(); }
   if (page==='alertes')    refreshAlertes();
+  if (page==='jugements')  refreshJugements();
   if (page==='tresorerie') refreshTreasury();
   if (page==='comptes')    refreshComptes();
 }
 function refreshAll() {
   refreshNinjas(); refreshNinjaSelect(); refreshFautes();
-  refreshAlertes(); refreshTreasury(); refreshComptes(); updateBadge();
+  refreshAlertes(); refreshJugements(); refreshTreasury(); refreshComptes(); updateBadge();
 }
 
 // ─── PHOTO ───────────────────────────────────────────────────
@@ -636,15 +678,18 @@ function refreshNinjas() {
   noRes.style.display = 'none'; tbody.innerHTML = '';
   list.forEach(n => {
     const fCount = db.fautes.filter(f => f.ninjaId === n.id).length;
+    const jCount = (db.jugements||[]).filter(j => j.ninjaId === n.id).length;
     const gc = gradeClass(n.grade);
     const avatar = n.photo
       ? `<div class="ninja-avatar"><img src="${n.photo}" alt="${n.prenom}" /></div>`
       : `<div class="ninja-avatar">${n.prenom[0]||'?'}</div>`;
+    const enJugement = (db.jugements||[]).some(j => j.ninjaId === n.id && j.statut === 'en_attente');
     const tr = document.createElement('tr');
     tr.innerHTML = `<td>${avatar}</td><td>${n.prenom}</td><td>${n.nom}</td>
       <td><span class="grade-badge ${gc}">${n.grade}</span></td>
       <td><span class="village-badge village-${n.village}">${n.village}</span></td>
-      <td style="font-family:'Cinzel',serif;font-size:0.85rem;color:${fCount>=3?'var(--red-seal)':'var(--ink)'};">${fCount}${fCount>=3?' ⚠':''}</td>
+      <td style="font-family:'Cinzel',serif;font-size:0.85rem;color:${fCount>=3?'var(--red-seal)':'var(--ink)'};">${fCount}${fCount>=3?' ⚠':''}${enJugement?' <span style="color:var(--gold);font-size:0.7rem;">⚖</span>':''}</td>
+      <td><button class="btn btn-ghost btn-sm" onclick="openProfil('${n.id}')">📜 Profil</button></td>
       <td>${canAddNinja()?`<button class="btn btn-ghost btn-sm" onclick="deleteNinja('${n.id}')">Retirer</button>`:''}</td>`;
     tbody.appendChild(tr);
   });
@@ -704,14 +749,28 @@ function refreshFautes() {
 
 // ─── ALERTES ─────────────────────────────────────────────────
 function updateBadge() {
-  const count = db.ninjas.filter(n => db.fautes.filter(f => f.ninjaId===n.id).length >= 3).length;
+  // Alertes = ninjas ≥3 fautes ET pas encore en jugement en attente
+  const alerte = db.ninjas.filter(n =>
+    db.fautes.filter(f => f.ninjaId===n.id).length >= 3 &&
+    !(db.jugements||[]).some(j => j.ninjaId===n.id && j.statut==='en_attente')
+  ).length;
   const badge = document.getElementById('alert-badge');
-  badge.style.display = count > 0 ? 'flex' : 'none'; badge.textContent = count;
+  badge.style.display = alerte > 0 ? 'flex' : 'none'; badge.textContent = alerte;
+
+  // Jugements en attente
+  const enAttente = (db.jugements||[]).filter(j => j.statut==='en_attente').length;
+  const jbadge = document.getElementById('jugement-badge');
+  if (jbadge) { jbadge.style.display = enAttente > 0 ? 'flex' : 'none'; jbadge.textContent = enAttente; }
 }
+
 function refreshAlertes() {
   const list    = document.getElementById('alerte-list');
   const empty   = document.getElementById('alerte-empty');
-  const flagged = db.ninjas.filter(n => db.fautes.filter(f => f.ninjaId===n.id).length >= 3);
+  // On affiche les ninjas ≥3 fautes qui ne sont PAS encore en jugement en_attente
+  const flagged = db.ninjas.filter(n =>
+    db.fautes.filter(f => f.ninjaId===n.id).length >= 3 &&
+    !(db.jugements||[]).some(j => j.ninjaId===n.id && j.statut==='en_attente')
+  );
   list.innerHTML = '';
   if (flagged.length === 0) { empty.style.display='block'; return; }
   empty.style.display = 'none';
@@ -726,15 +785,19 @@ function refreshAlertes() {
         <div style="font-family:'Cinzel',serif;font-size:1rem;">${n.prenom} ${n.nom}</div>
         <div style="font-size:0.82rem;color:var(--red-seal);font-style:italic;">${faults.length} faute(s) — <span class="village-badge village-${n.village}">${n.village}</span></div>
       </div></div>
-      <button class="btn btn-danger btn-sm" onclick="openDossier('${n.id}')">Ouvrir le Dossier</button>`;
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn btn-ghost btn-sm" onclick="openDossier('${n.id}')">📋 Dossier</button>
+        <button class="btn btn-danger btn-sm" onclick="envoyerJugement('${n.id}')">⚖ Envoyer en jugement</button>
+      </div>`;
     list.appendChild(div);
   });
 }
+
 function openDossier(ninjaId) {
   const n      = db.ninjas.find(x => x.id === ninjaId);
   const faults = db.fautes.filter(f => f.ninjaId === ninjaId);
   const gc     = gradeClass(n.grade);
-  document.getElementById('dossier-title').textContent = `Dossier : ${n.prenom} ${n.nom}`;
+  document.getElementById('dossier-title').textContent = `Dossier criminel : ${n.prenom} ${n.nom}`;
   const avatar = n.photo
     ? `<img src="${n.photo}" style="width:64px;height:64px;border-radius:50%;object-fit:cover;border:2px solid var(--parch-edge);" />`
     : `<div style="width:64px;height:64px;border-radius:50%;background:var(--parch-mid);border:2px solid var(--parch-edge);display:flex;align-items:center;justify-content:center;font-family:'Noto Serif JP',serif;font-size:1.5rem;color:var(--ink-light);">${n.prenom[0]}</div>`;
@@ -756,7 +819,202 @@ function openDossier(ninjaId) {
     </div>`;
   });
   document.getElementById('dossier-content').innerHTML = html;
+  // Bouton envoyer en jugement dans le footer du modal
+  const actions = document.getElementById('dossier-actions');
+  const dejaEnJugement = (db.jugements||[]).some(j => j.ninjaId===ninjaId && j.statut==='en_attente');
+  actions.innerHTML = dejaEnJugement
+    ? `<span style="font-family:'Cinzel',serif;font-size:0.78rem;color:var(--gold);font-style:italic;">⚖ Déjà en attente de jugement</span>`
+    : `<button class="btn btn-danger" onclick="closeModal('modal-dossier');envoyerJugement('${ninjaId}')">⚖ Envoyer en jugement</button>`;
   document.getElementById('modal-dossier').classList.add('open');
+}
+
+// ─── JUGEMENTS ───────────────────────────────────────────────
+function envoyerJugement(ninjaId) {
+  if (!canAddNinja()) { alert('Accès non autorisé.'); return; }
+  if (!db.jugements) db.jugements = [];
+  if (db.jugements.some(j => j.ninjaId===ninjaId && j.statut==='en_attente')) {
+    alert('Ce ninja est déjà en attente de jugement.'); return;
+  }
+  const n = db.ninjas.find(x => x.id===ninjaId);
+  jugementTargetNinjaId = ninjaId;
+  document.getElementById('jugement-modal-title').textContent = `Jugement : ${n.prenom} ${n.nom}`;
+  document.getElementById('jugement-ninja-info').textContent = `Grade : ${n.grade} — Village : ${n.village}`;
+  document.getElementById('j-date').value = new Date().toLocaleDateString('fr-FR');
+  document.getElementById('j-peine').value = '';
+  document.getElementById('j-notes').value = '';
+  document.getElementById('modal-jugement').classList.add('open');
+}
+
+function confirmJugement() {
+  const date  = document.getElementById('j-date').value.trim();
+  const peine = document.getElementById('j-peine').value.trim();
+  const notes = document.getElementById('j-notes').value.trim();
+  if (!peine) { alert('Veuillez saisir la peine / résultat.'); return; }
+  if (!db.jugements) db.jugements = [];
+  db.jugements.push({
+    id: 'j'+Date.now(),
+    ninjaId: jugementTargetNinjaId,
+    date, peine, notes,
+    statut: 'en_attente',
+    author: currentUser.username
+  });
+  closeModal('modal-jugement');
+  scheduleSave();
+  refreshAlertes(); refreshJugements(); refreshNinjas(); updateBadge();
+}
+
+function cloturerJugement(jugementId) {
+  if (!canAddNinja()) { alert('Accès non autorisé.'); return; }
+  const j = (db.jugements||[]).find(x => x.id===jugementId);
+  if (j) j.statut = 'clos';
+  scheduleSave();
+  refreshJugements(); refreshAlertes(); refreshNinjas(); updateBadge();
+}
+
+function refreshJugements() {
+  const list  = document.getElementById('jugement-list');
+  const empty = document.getElementById('jugement-empty');
+  if (!db.jugements) db.jugements = [];
+  const enAttente = db.jugements.filter(j => j.statut==='en_attente');
+  const clos      = db.jugements.filter(j => j.statut==='clos');
+  list.innerHTML = '';
+  if (db.jugements.length === 0) { empty.style.display='block'; return; }
+  empty.style.display = 'none';
+
+  if (enAttente.length > 0) {
+    list.innerHTML += `<div style="font-family:'Cinzel',serif;font-size:0.78rem;color:var(--red-seal);letter-spacing:0.1em;margin-bottom:1rem;">EN ATTENTE DE JUGEMENT (${enAttente.length})</div>`;
+    enAttente.forEach(j => {
+      const n = db.ninjas.find(x => x.id===j.ninjaId);
+      const name = n ? `${n.prenom} ${n.nom}` : 'Ninja inconnu';
+      const gc   = n ? gradeClass(n.grade) : '';
+      const avatar = n?.photo
+        ? `<img src="${n.photo}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;border:1.5px solid var(--gold);" />`
+        : `<div style="width:40px;height:40px;border-radius:50%;background:var(--parch-mid);border:1.5px solid var(--gold);display:flex;align-items:center;justify-content:center;font-family:'Noto Serif JP',serif;font-size:1rem;color:var(--ink-light);">${(n?.prenom||'?')[0]}</div>`;
+      const div = document.createElement('div');
+      div.style.cssText = 'background:linear-gradient(135deg,#fffbe6,var(--parch-light));border:1.5px solid var(--gold);border-radius:3px;padding:1.2rem 1.5rem;margin-bottom:1rem;';
+      div.innerHTML = `
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:1rem;">
+          ${avatar}
+          <div style="flex:1;">
+            <div style="font-family:'Cinzel',serif;font-size:1rem;">${name}</div>
+            <div style="font-size:0.78rem;color:var(--ink-light);font-style:italic;">Jugement fixé au ${j.date} · par ${j.author}</div>
+          </div>
+          ${canAddNinja() ? `<button class="btn btn-success btn-sm" onclick="cloturerJugement('${j.id}')">✓ Clôturer</button>` : ''}
+        </div>
+        <div style="background:rgba(184,149,90,0.1);border-left:3px solid var(--gold);padding:0.8rem;border-radius:2px;">
+          <div style="font-family:'Cinzel',serif;font-size:0.72rem;color:var(--ink-fade);letter-spacing:0.08em;margin-bottom:4px;">PEINE / RÉSULTAT</div>
+          <div style="font-size:0.9rem;color:var(--ink);">${j.peine}</div>
+          ${j.notes ? `<div style="font-size:0.8rem;color:var(--ink-fade);font-style:italic;margin-top:6px;">${j.notes}</div>` : ''}
+        </div>`;
+      list.appendChild(div);
+    });
+  }
+
+  if (clos.length > 0) {
+    const sep = document.createElement('div');
+    sep.style.cssText = 'height:1px;background:var(--parch-edge);opacity:0.4;margin:1.5rem 0;';
+    list.appendChild(sep);
+    list.innerHTML += `<div style="font-family:'Cinzel',serif;font-size:0.78rem;color:var(--ink-fade);letter-spacing:0.1em;margin-bottom:1rem;">JUGEMENTS CLOS (${clos.length})</div>`;
+    clos.forEach(j => {
+      const n = db.ninjas.find(x => x.id===j.ninjaId);
+      const name = n ? `${n.prenom} ${n.nom}` : 'Ninja inconnu';
+      const div = document.createElement('div');
+      div.style.cssText = 'background:rgba(184,149,90,0.05);border:1px solid rgba(184,149,90,0.3);border-radius:3px;padding:1rem 1.5rem;margin-bottom:0.8rem;opacity:0.8;';
+      div.innerHTML = `
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+          <div>
+            <span style="font-family:'Cinzel',serif;font-size:0.88rem;">${name}</span>
+            <span style="font-size:0.75rem;color:var(--ink-light);font-style:italic;margin-left:8px;">${j.date}</span>
+          </div>
+          <span style="font-size:0.72rem;color:var(--konoha-green);font-family:'Cinzel',serif;">✓ Clos</span>
+        </div>
+        <div style="font-size:0.82rem;color:var(--ink-fade);margin-top:6px;font-style:italic;">${j.peine}</div>`;
+      list.appendChild(div);
+    });
+  }
+}
+
+// ─── PROFIL NINJA ─────────────────────────────────────────────
+function openProfil(ninjaId) {
+  const n       = db.ninjas.find(x => x.id===ninjaId);
+  const faults  = db.fautes.filter(f => f.ninjaId===ninjaId);
+  const jugs    = (db.jugements||[]).filter(j => j.ninjaId===ninjaId);
+  const gc      = gradeClass(n.grade);
+  document.getElementById('profil-title').textContent = `Profil — ${n.prenom} ${n.nom}`;
+  const avatar = n.photo
+    ? `<img src="${n.photo}" style="width:80px;height:80px;border-radius:50%;object-fit:cover;border:3px solid var(--parch-edge);" />`
+    : `<div style="width:80px;height:80px;border-radius:50%;background:var(--parch-mid);border:3px solid var(--parch-edge);display:flex;align-items:center;justify-content:center;font-family:'Noto Serif JP',serif;font-size:2rem;color:var(--ink-light);">${n.prenom[0]}</div>`;
+
+  const brises = faults.filter(f => f.type==='Brisé de traité');
+  const crimes = faults.filter(f => f.type==='Crime de guerre');
+  const jugsAttente = jugs.filter(j => j.statut==='en_attente');
+  const jugsClos    = jugs.filter(j => j.statut==='clos');
+
+  let html = `
+    <!-- En-tête profil -->
+    <div style="display:flex;gap:16px;align-items:center;margin-bottom:1.5rem;padding-bottom:1.2rem;border-bottom:1px solid var(--parch-edge);">
+      ${avatar}
+      <div style="flex:1;">
+        <div style="font-family:'Cinzel',serif;font-size:1.2rem;margin-bottom:8px;">${n.prenom} ${n.nom}</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <span class="grade-badge ${gc}">${n.grade}</span>
+          <span class="village-badge village-${n.village}">${n.village}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stats rapides -->
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:1.5rem;">
+      <div style="background:${brises.length>0?'#fff8e1':'rgba(184,149,90,0.08)'};border:1px solid ${brises.length>0?'#ffc107':'rgba(184,149,90,0.3)'};border-radius:3px;padding:0.8rem;text-align:center;">
+        <div style="font-family:'Cinzel',serif;font-size:1.4rem;color:${brises.length>0?'#856404':'var(--ink-light)'};">${brises.length}</div>
+        <div style="font-size:0.72rem;color:var(--ink-fade);font-family:'Cinzel',serif;">Brisés de traité</div>
+      </div>
+      <div style="background:${crimes.length>0?'#fde8e8':'rgba(184,149,90,0.08)'};border:1px solid ${crimes.length>0?'var(--red-seal)':'rgba(184,149,90,0.3)'};border-radius:3px;padding:0.8rem;text-align:center;">
+        <div style="font-family:'Cinzel',serif;font-size:1.4rem;color:${crimes.length>0?'var(--red-seal)':'var(--ink-light)'};">${crimes.length}</div>
+        <div style="font-size:0.72rem;color:var(--ink-fade);font-family:'Cinzel',serif;">Crimes de guerre</div>
+      </div>
+      <div style="background:${jugs.length>0?'#fffbe6':'rgba(184,149,90,0.08)'};border:1px solid ${jugs.length>0?'var(--gold)':'rgba(184,149,90,0.3)'};border-radius:3px;padding:0.8rem;text-align:center;">
+        <div style="font-family:'Cinzel',serif;font-size:1.4rem;color:${jugs.length>0?'var(--gold)':'var(--ink-light)'};">${jugs.length}</div>
+        <div style="font-size:0.72rem;color:var(--ink-fade);font-family:'Cinzel',serif;">Jugements</div>
+      </div>
+    </div>`;
+
+  // Fautes
+  if (faults.length > 0) {
+    html += `<div style="font-family:'Cinzel',serif;font-size:0.75rem;color:var(--ink-fade);letter-spacing:0.1em;margin-bottom:0.8rem;">FAUTES COMMISES</div>`;
+    faults.forEach(f => {
+      const tk = f.type==='Crime de guerre' ? 'Crime' : 'Brise';
+      html += `<div style="margin-bottom:0.6rem;padding:0.7rem;background:rgba(184,149,90,0.08);border-left:3px solid ${tk==='Crime'?'var(--red-seal)':'#ffc107'};border-radius:2px;">
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:4px;flex-wrap:wrap;">
+          <span class="fault-pill fault-${tk}">${f.type}</span>
+          <span style="font-size:0.72rem;color:var(--ink-light);">${f.date} · ${f.village}</span>
+        </div>
+        <div style="font-size:0.82rem;font-style:italic;color:var(--ink-fade);">${f.details.substring(0,100)}${f.details.length>100?'…':''}</div>
+      </div>`;
+    });
+  } else {
+    html += `<div style="text-align:center;padding:1rem;color:var(--ink-light);font-style:italic;font-size:0.88rem;">Aucune faute enregistrée.</div>`;
+  }
+
+  // Jugements
+  if (jugs.length > 0) {
+    html += `<div style="font-family:'Cinzel',serif;font-size:0.75rem;color:var(--ink-fade);letter-spacing:0.1em;margin:1rem 0 0.8rem;">JUGEMENTS</div>`;
+    jugs.forEach(j => {
+      const statutColor = j.statut==='en_attente' ? 'var(--gold)' : 'var(--konoha-green)';
+      const statutLabel = j.statut==='en_attente' ? '⚖ En attente' : '✓ Clos';
+      html += `<div style="margin-bottom:0.6rem;padding:0.7rem;background:rgba(201,162,39,0.08);border-left:3px solid ${statutColor};border-radius:2px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;flex-wrap:wrap;gap:4px;">
+          <span style="font-size:0.72rem;color:var(--ink-light);">Jugement du ${j.date}</span>
+          <span style="font-family:'Cinzel',serif;font-size:0.7rem;color:${statutColor};">${statutLabel}</span>
+        </div>
+        <div style="font-size:0.85rem;color:var(--ink);">${j.peine}</div>
+        ${j.notes?`<div style="font-size:0.78rem;font-style:italic;color:var(--ink-fade);margin-top:4px;">${j.notes}</div>`:''}
+      </div>`;
+    });
+  }
+
+  document.getElementById('profil-content').innerHTML = html;
+  document.getElementById('modal-profil').classList.add('open');
 }
 
 // ─── TRESORERIE ───────────────────────────────────────────────
