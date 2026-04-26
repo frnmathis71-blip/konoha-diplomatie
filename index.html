@@ -472,6 +472,24 @@ async function loadDB() {
       }
     });
 
+    const text = await res.text();
+    console.log("JSONBin réponse :", res.status, text);
+
+    if (!res.ok) {
+      alert("Erreur JSONBin " + res.status + " : " + text);
+      return;
+    }
+
+    const data = JSON.parse(text);
+    db = data.record;
+    refreshAll();
+
+  } catch (e) {
+    console.error(e);
+    alert("Erreur réseau ou CORS : regarde la console F12.");
+  }
+}
+
     const data = await res.json();
 
     if (data.record) {
@@ -487,7 +505,7 @@ async function loadDB() {
 
 async function saveDB() {
   try {
-    await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
+    const res = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
@@ -495,9 +513,17 @@ async function saveDB() {
       },
       body: JSON.stringify(db)
     });
+
+    const text = await res.text();
+    console.log("Sauvegarde JSONBin :", res.status, text);
+
+    if (!res.ok) {
+      alert("Erreur sauvegarde JSONBin " + res.status + " : " + text);
+    }
+
   } catch (e) {
     console.error(e);
-    alert("Erreur : les données n'ont pas été sauvegardées.");
+    alert("Erreur sauvegarde réseau ou CORS.");
   }
 }
 
