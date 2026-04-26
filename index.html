@@ -651,8 +651,7 @@ async function importJSON() {
   console.log("✅ Import Firebase OK");
 }
 
-// LANCER UNE SEULE FOIS
-importJSON();
+
 
 
 function scheduleSave() { clearTimeout(saveTimeout); saveTimeout = setTimeout(() => saveDB(), 800); }
