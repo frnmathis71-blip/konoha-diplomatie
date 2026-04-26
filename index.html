@@ -560,6 +560,18 @@ async function fetchRemoteDB() {
   }
 }
 
+  async function saveDB(silent=false) {
+  try {
+    await setDoc(doc(firebaseDb, "app", "konoha"), db);
+    cacheWrite(db);
+    if (!silent) showSaveIndicator('✓ Sauvegardé', false);
+  } catch(e) {
+    console.error(e);
+    cacheWrite(db);
+    if (!silent) showSaveIndicator('⚠ Local uniquement', true);
+  }
+}
+
 async function importJSON() {
   const data = {
     users: [
