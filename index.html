@@ -450,6 +450,33 @@
   </div>
 </div>
 
+<!-- Modal édition jugement -->
+<div class="modal-overlay" id="modal-edit-jugement">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeModal('modal-edit-jugement')">✕</button>
+    <div class="modal-title" id="edit-jugement-title">Modifier le Jugement</div>
+    <div id="edit-jugement-ninja-info" style="font-family:'Cinzel',serif;color:var(--ink-fade);font-size:0.85rem;margin-bottom:1.2rem;"></div>
+    <label>Statut</label>
+    <select id="ej-statut">
+      <option value="en_attente">En attente</option>
+      <option value="clos">Clos</option>
+    </select>
+    <label>Date du jugement</label>
+    <input type="text" id="ej-date" placeholder="Ex: 26/04/2026" />
+    <label>Peine / Résultat</label>
+    <textarea id="ej-peine" style="min-height:100px;" placeholder="Ex: Bannissement, emprisonnement, amende, acquittement..."></textarea>
+    <label>Notes supplémentaires <span style="font-weight:400;font-style:italic;font-size:0.75rem;">(optionnel)</span></label>
+    <textarea id="ej-notes" placeholder="Circonstances atténuantes, conditions..."></textarea>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:1rem;padding-top:1rem;border-top:1px solid var(--parch-edge);">
+      <button class="btn btn-danger btn-sm" onclick="supprimerJugement()">Supprimer ce jugement</button>
+      <div class="flex-end">
+        <button class="btn btn-ghost" onclick="closeModal('modal-edit-jugement')">Annuler</button>
+        <button class="btn btn-primary" style="width:auto;" onclick="sauvegarderJugement()">Enregistrer</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Confirmation suppression dette -->
 <div class="confirm-overlay" id="confirm-paye">
   <div class="confirm-box">
@@ -485,6 +512,7 @@ let pendingPhoto = null;
 let saveTimeout = null;
 let jugementTargetNinjaId = null;
 let dettePayeId = null;
+let editJugementId = null;
 
 const LS_KEY = 'konoha_db_cache';
 function cacheRead() { try { const r=localStorage.getItem(LS_KEY); if(r) return JSON.parse(r); } catch(e){} return null; }
@@ -912,6 +940,46 @@ function cloturerJugement(jugementId) {
   refreshJugements(); refreshAlertes(); refreshNinjas(); updateBadge();
 }
 
+function ouvrirEditJugement(jugementId) {
+  if (!canJugement()) { alert('Accès non autorisé.'); return; }
+  const j = (db.jugements||[]).find(x => x.id===jugementId);
+  if (!j) return;
+  const n = db.ninjas.find(x => x.id===j.ninjaId);
+  editJugementId = jugementId;
+  document.getElementById('edit-jugement-title').textContent = `Modifier : ${n?n.prenom+' '+n.nom:'Ninja inconnu'}`;
+  document.getElementById('edit-jugement-ninja-info').textContent = n?`Grade : ${n.grade} — Village : ${n.village}`:'';
+  document.getElementById('ej-statut').value = j.statut;
+  document.getElementById('ej-date').value = j.date;
+  document.getElementById('ej-peine').value = j.peine;
+  document.getElementById('ej-notes').value = j.notes||'';
+  document.getElementById('modal-edit-jugement').classList.add('open');
+}
+
+function sauvegarderJugement() {
+  if (!editJugementId) return;
+  const j = (db.jugements||[]).find(x => x.id===editJugementId);
+  if (!j) return;
+  const peine = document.getElementById('ej-peine').value.trim();
+  if (!peine) { alert('La peine ne peut pas être vide.'); return; }
+  j.statut = document.getElementById('ej-statut').value;
+  j.date   = document.getElementById('ej-date').value.trim();
+  j.peine  = peine;
+  j.notes  = document.getElementById('ej-notes').value.trim();
+  closeModal('modal-edit-jugement');
+  scheduleSave();
+  refreshJugements(); refreshAlertes(); refreshNinjas(); updateBadge();
+}
+
+function supprimerJugement() {
+  if (!editJugementId) return;
+  if (!confirm('Supprimer définitivement ce jugement des archives ?')) return;
+  db.jugements = (db.jugements||[]).filter(x => x.id!==editJugementId);
+  editJugementId = null;
+  closeModal('modal-edit-jugement');
+  scheduleSave();
+  refreshJugements(); refreshAlertes(); refreshNinjas(); updateBadge();
+}
+
 function refreshJugements() {
   const list = document.getElementById('jugement-list');
   const empty = document.getElementById('jugement-empty');
@@ -939,7 +1007,11 @@ function refreshJugements() {
             <div style="font-family:'Cinzel',serif;font-size:1rem;">${name}</div>
             <div style="font-size:0.78rem;color:var(--ink-light);font-style:italic;">Jugement fixé au ${j.date} · par ${j.author}</div>
           </div>
-          ${canJugement()?`<button class="btn btn-success btn-sm" onclick="cloturerJugement('${j.id}')">✓ Clôturer</button>`:''}
+          ${canJugement()?`
+          <div style="display:flex;gap:6px;">
+            <button class="btn btn-ghost btn-sm" onclick="ouvrirEditJugement('${j.id}')">✏ Modifier</button>
+            <button class="btn btn-success btn-sm" onclick="cloturerJugement('${j.id}')">✓ Clôturer</button>
+          </div>`:''}
         </div>
         <div style="background:rgba(184,149,90,0.1);border-left:3px solid var(--gold);padding:0.8rem;border-radius:0 2px 2px 0;">
           <div style="font-family:'Cinzel',serif;font-size:0.72rem;color:var(--ink-fade);letter-spacing:0.08em;margin-bottom:4px;">PEINE / RÉSULTAT</div>
@@ -959,16 +1031,20 @@ function refreshJugements() {
       const n = db.ninjas.find(x => x.id===j.ninjaId);
       const name = n?`${n.prenom} ${n.nom}`:'Ninja inconnu';
       const div = document.createElement('div');
-      div.style.cssText = 'background:rgba(184,149,90,0.05);border:1px solid rgba(184,149,90,0.3);border-radius:3px;padding:1rem 1.5rem;margin-bottom:0.8rem;opacity:0.8;';
+      div.style.cssText = 'background:rgba(184,149,90,0.05);border:1px solid rgba(184,149,90,0.3);border-radius:3px;padding:1rem 1.5rem;margin-bottom:0.8rem;';
       div.innerHTML = `
         <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
           <div>
             <span style="font-family:'Cinzel',serif;font-size:0.88rem;">${name}</span>
             <span style="font-size:0.75rem;color:var(--ink-light);font-style:italic;margin-left:8px;">${j.date}</span>
           </div>
-          <span style="font-size:0.72rem;color:var(--konoha-green);font-family:'Cinzel',serif;">✓ Clos</span>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span style="font-size:0.72rem;color:var(--konoha-green);font-family:'Cinzel',serif;">✓ Clos</span>
+            ${canJugement()?`<button class="btn btn-ghost btn-sm" onclick="ouvrirEditJugement('${j.id}')">✏ Modifier</button>`:''}
+          </div>
         </div>
-        <div style="font-size:0.82rem;color:var(--ink-fade);margin-top:6px;font-style:italic;">${j.peine}</div>`;
+        <div style="font-size:0.82rem;color:var(--ink-fade);margin-top:6px;font-style:italic;">${j.peine}</div>
+        ${j.notes?`<div style="font-size:0.78rem;color:var(--ink-light);font-style:italic;margin-top:4px;">${j.notes}</div>`:''}`;
       list.appendChild(div);
     });
   }
@@ -1300,7 +1376,7 @@ function confirmRole() {
 // MODALS
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
 document.querySelectorAll('.modal-overlay').forEach(m => {
-  m.addEventListener('click', e => { if (e.target===m) m.classList.remove('open'); });
+  m.addEventListener('click', e => { if (e.target===m) { m.classList.remove('open'); editJugementId=null; } });
 });
 document.getElementById('confirm-paye').addEventListener('click', e => {
   if (e.target===document.getElementById('confirm-paye')) closeConfirmPaye();
