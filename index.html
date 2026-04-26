@@ -415,26 +415,33 @@ async function loadDB() {
 async function fetchRemoteDB() {
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 8000); // timeout 8s
+    const timeout = setTimeout(() => controller.abort(), 8000);
 
     const res = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`, {
-      headers: { "X-Master-Key": API_KEY, "X-Bin-Meta": "false" },
+      headers: { "X-Master-Key": API_KEY },
       signal: controller.signal
     });
     clearTimeout(timeout);
 
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
+    const raw = await res.json();
+
+    // JSONBin renvoie { record: {...}, metadata: {...} }
+    // On extrait le record quelle que soit la forme de la réponse
+    const data = raw.record ?? raw;
 
     if (data && Array.isArray(data.users)) {
       db = data;
-      cacheWrite(db); // mettre en cache pour la prochaine visite
+      cacheWrite(db);
       setDbStatus('ok', 'Archives synchronisées ✓');
-
-      // Si l'utilisateur est déjà connecté, rafraîchir l'affichage
-      if (currentUser) refreshAll();
+      // Si l'utilisateur est déjà connecté, on rafraîchit l'affichage
+      if (currentUser) {
+        // Mettre à jour currentUser avec les données fraîches
+        currentUser = db.users.find(u => u.id === currentUser.id) || currentUser;
+        refreshAll();
+      }
     } else {
-      // Bin vide → initialiser avec DEFAULT_DB
+      // Bin vide ou mal structuré → on initialise avec DEFAULT_DB
       db = JSON.parse(JSON.stringify(DEFAULT_DB));
       await saveDB(true);
       cacheWrite(db);
@@ -447,7 +454,6 @@ async function fetchRemoteDB() {
       setDbStatus('err', 'Hors ligne — données locales');
     }
     console.warn('fetchRemoteDB:', e);
-    // On garde le cache ou le DEFAULT_DB, le site fonctionne quand même
   }
 }
 
