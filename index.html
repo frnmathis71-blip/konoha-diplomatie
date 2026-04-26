@@ -639,13 +639,9 @@ async function importJSON() {
   console.log("✅ Import Firebase OK");
 }
 
-
-
-  await setDoc(doc(firebaseDb, "app", "konoha"), data);
-  console.log("✅ Import OK");
-}
-
+// LANCER UNE SEULE FOIS
 importJSON();
+
 
 function scheduleSave() { clearTimeout(saveTimeout); saveTimeout = setTimeout(() => saveDB(), 800); }
 
