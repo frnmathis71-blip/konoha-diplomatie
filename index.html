@@ -16,6 +16,7 @@
   *{box-sizing:border-box;margin:0;padding:0;}
   body{font-family:'IM Fell English',serif;background:#1a0f00;color:var(--ink);min-height:100vh;}
 
+  /* ── LOGIN ── */
   #login-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:2rem;}
   .login-card{background:var(--parch-light);border:3px solid var(--parch-edge);border-radius:4px;padding:2.5rem 3rem;max-width:420px;width:100%;box-shadow:0 0 40px rgba(0,0,0,0.6),inset 0 0 30px rgba(184,149,90,0.15);position:relative;}
   .login-card::before{content:'木';position:absolute;top:12px;right:18px;font-size:2rem;color:var(--parch-edge);opacity:0.4;font-family:'Noto Serif JP',serif;}
@@ -24,6 +25,14 @@
   .seal-divider{display:flex;align-items:center;gap:10px;margin:1rem 0;}
   .seal-divider::before,.seal-divider::after{content:'';flex:1;height:1px;background:var(--parch-edge);}
   .seal-symbol{color:var(--red-seal);font-size:1.2rem;}
+
+  /* ── DB STATUS sous le formulaire ── */
+  #db-status{display:flex;align-items:center;gap:8px;font-size:0.75rem;color:var(--ink-light);font-family:'Cinzel',serif;letter-spacing:0.06em;margin-bottom:1rem;font-style:italic;}
+  .db-dot{width:8px;height:8px;border-radius:50%;background:var(--gold);flex-shrink:0;animation:pulse 1.2s ease-in-out infinite;}
+  .db-dot.ok{background:var(--konoha-green);animation:none;}
+  .db-dot.err{background:var(--red-seal);animation:none;}
+  @keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.3;}}
+
   label{display:block;font-size:0.8rem;color:var(--ink-fade);margin-bottom:4px;letter-spacing:0.05em;font-family:'Cinzel',serif;}
   input[type=text],input[type=password],input[type=number],textarea,select{width:100%;padding:8px 12px;background:rgba(255,255,255,0.5);border:1px solid var(--parch-edge);border-radius:2px;font-family:'IM Fell English',serif;color:var(--ink);font-size:0.95rem;margin-bottom:1rem;outline:none;transition:border-color 0.2s,background 0.2s;}
   input:focus,textarea:focus,select:focus{border-color:var(--ink-fade);background:rgba(255,255,255,0.7);}
@@ -42,10 +51,8 @@
   .toggle-link{text-align:center;margin-top:1rem;font-size:0.85rem;color:var(--ink-fade);}
   .toggle-link a{color:var(--red-seal);cursor:pointer;text-decoration:underline;}
   .error-msg{font-size:0.82rem;margin-bottom:0.8rem;font-style:italic;}
-  #loading-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;gap:1rem;}
-  .loading-spinner{width:40px;height:40px;border:3px solid var(--parch-edge);border-top-color:var(--gold);border-radius:50%;animation:spin 1s linear infinite;}
-  @keyframes spin{to{transform:rotate(360deg);}}
-  .loading-text{font-family:'Cinzel',serif;color:var(--parch-mid);font-size:0.9rem;letter-spacing:0.15em;}
+
+  /* ── APP ── */
   #app{display:none;flex-direction:column;min-height:100vh;}
   .navbar{height:var(--nav-h);background:var(--ink);border-bottom:2px solid var(--gold);display:flex;align-items:center;padding:0 1.5rem;position:sticky;top:0;z-index:100;}
   .navbar-brand{font-family:'Cinzel',serif;color:var(--gold);font-size:1rem;font-weight:700;letter-spacing:0.15em;margin-right:2rem;white-space:nowrap;}
@@ -141,18 +148,21 @@
 </head>
 <body>
 
-<div id="loading-screen">
-  <div class="loading-spinner"></div>
-  <div class="loading-text">Chargement des archives...</div>
-</div>
-
-<div id="login-screen" style="display:none;">
+<!-- LOGIN — affiché immédiatement -->
+<div id="login-screen">
   <div class="login-card">
     <div class="login-title">村の外交省</div>
     <div style="font-family:'Cinzel',serif;font-size:1rem;letter-spacing:0.2em;text-align:center;color:var(--ink);margin-bottom:0.2rem;">DIPLOMATIE DE KONOHA</div>
     <div class="login-sub">Archives diplomatiques — Accès sécurisé</div>
     <div class="seal-divider"><span class="seal-symbol">⊕</span></div>
+
     <div id="login-form">
+      <!-- Indicateur de sync DB -->
+      <div id="db-status">
+        <div class="db-dot" id="db-dot"></div>
+        <span id="db-status-text">Connexion aux archives...</span>
+      </div>
+
       <label>Identifiant</label>
       <input type="text" id="login-user" placeholder="Nom du shinobi..." />
       <label>Mot de passe</label>
@@ -161,10 +171,11 @@
       <button class="btn btn-primary" onclick="doLogin()">Accéder aux Archives</button>
       <div class="toggle-link">Pas encore enregistré ? <a onclick="showRegister()">Créer un compte</a></div>
     </div>
+
     <div id="register-form" style="display:none;">
       <label>Identifiant</label><input type="text" id="reg-user" placeholder="Nom du shinobi..." />
       <label>Mot de passe</label><input type="password" id="reg-pass" placeholder="••••••••" />
-      <label>Confirmer le mot de passe</label><input type="password" id="reg-pass2" placeholder="••••••••" />
+      <label>Confirmer</label><input type="password" id="reg-pass2" placeholder="••••••••" />
       <div id="reg-error" class="error-msg" style="display:none;"></div>
       <div style="font-size:0.8rem;color:var(--ink-fade);font-style:italic;margin-bottom:1rem;">Votre compte sera validé par un Administrateur avant activation.</div>
       <button class="btn btn-primary" onclick="doRegister()">Soumettre la demande</button>
@@ -173,6 +184,7 @@
   </div>
 </div>
 
+<!-- APP -->
 <div id="app">
   <nav class="navbar">
     <div class="navbar-brand">木の葉<span>Konoha Diplomatie</span></div>
@@ -307,6 +319,7 @@
   </div>
 </div>
 
+<!-- MODALS -->
 <div class="modal-overlay" id="modal-dossier">
   <div class="modal-box">
     <button class="modal-close" onclick="closeModal('modal-dossier')">✕</button>
@@ -348,10 +361,10 @@
 
 <script>
 // ============================================================
-//  ⚙️  CONFIGURATION — REMPLISSEZ CES DEUX VALEURS
+//  ⚙️  CONFIGURATION
 // ============================================================
-const BIN_ID  = "69ed884b856a68218972866c";   // ex: "686a1f2e8960c335..."
-const API_KEY = "$2a$10$h4.qcsndZo0hrJUhEfXGDOapIc3dMAS2e/S8gUHhUf4zEMGvp42Bu";  // ex: "$2a$10$abc123..."
+const BIN_ID  = "69ed884b856a68218972866c";
+const API_KEY = "$2a$10$h4.qcsndZo0hrJUhEfXGDOapIc3dMAS2e/S8gUHhUf4zEMGvp42Bu";
 // ============================================================
 
 const ROLES = {
@@ -364,215 +377,265 @@ const DEFAULT_DB = {
 };
 
 let db = JSON.parse(JSON.stringify(DEFAULT_DB));
-let currentUser=null, txMode='add', roleTargetId=null, pendingPhoto=null, saveTimeout=null;
+let currentUser = null;
+let txMode = 'add';
+let roleTargetId = null;
+let pendingPhoto = null;
+let saveTimeout = null;
 
-// ==================== JSONBin ====================
-async function loadDB() {
+// ─── Cache localStorage pour accès instantané ───────────────
+const LS_KEY = 'konoha_db_cache';
+
+function cacheRead() {
   try {
+    const raw = localStorage.getItem(LS_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch(e) {}
+  return null;
+}
+function cacheWrite(data) {
+  try { localStorage.setItem(LS_KEY, JSON.stringify(data)); } catch(e) {}
+}
+
+// ─── JSONBin ─────────────────────────────────────────────────
+async function loadDB() {
+  // 1. Afficher le login IMMÉDIATEMENT avec le cache si disponible
+  const cached = cacheRead();
+  if (cached && cached.users) {
+    db = cached;
+    setDbStatus('cache', 'Archives locales chargées');
+  } else {
+    setDbStatus('loading', 'Connexion aux archives...');
+  }
+
+  // 2. Charger la vraie DB en arrière-plan (sans bloquer l'UI)
+  fetchRemoteDB();
+}
+
+async function fetchRemoteDB() {
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 8000); // timeout 8s
+
     const res = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`, {
-      headers: {
-        "X-Master-Key": API_KEY
-      }
+      headers: { "X-Master-Key": API_KEY, "X-Bin-Meta": "false" },
+      signal: controller.signal
     });
+    clearTimeout(timeout);
 
-    const text = await res.text();
-    console.log("JSONBin réponse :", res.status, text);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
 
-    if (!res.ok) {
-      alert("Erreur JSONBin " + res.status + " : " + text);
-      return;
+    if (data && Array.isArray(data.users)) {
+      db = data;
+      cacheWrite(db); // mettre en cache pour la prochaine visite
+      setDbStatus('ok', 'Archives synchronisées ✓');
+
+      // Si l'utilisateur est déjà connecté, rafraîchir l'affichage
+      if (currentUser) refreshAll();
+    } else {
+      // Bin vide → initialiser avec DEFAULT_DB
+      db = JSON.parse(JSON.stringify(DEFAULT_DB));
+      await saveDB(true);
+      cacheWrite(db);
+      setDbStatus('ok', 'Archives initialisées ✓');
     }
-
-    const data = JSON.parse(text);
-    db = data.record;
-    refreshAll();
-
-  } catch (e) {
-    console.error(e);
-    alert("Erreur réseau ou CORS : regarde la console F12.");
+  } catch(e) {
+    if (e.name === 'AbortError') {
+      setDbStatus('err', 'Délai dépassé — données locales');
+    } else {
+      setDbStatus('err', 'Hors ligne — données locales');
+    }
+    console.warn('fetchRemoteDB:', e);
+    // On garde le cache ou le DEFAULT_DB, le site fonctionne quand même
   }
 }
 
-async function saveDB() {
+async function saveDB(silent = false) {
   try {
     const res = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
       method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Master-Key": API_KEY
-      },
+      headers: { "Content-Type": "application/json", "X-Master-Key": API_KEY },
       body: JSON.stringify(db)
     });
-
-    const text = await res.text();
-    console.log("Sauvegarde JSONBin :", res.status, text);
-
-    if (!res.ok) {
-      alert("Erreur sauvegarde JSONBin " + res.status + " : " + text);
-    }
-
-  } catch (e) {
-    console.error(e);
-    alert("Erreur sauvegarde réseau ou CORS.");
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    cacheWrite(db); // toujours mettre à jour le cache local
+    if (!silent) showSaveIndicator('✓ Sauvegardé', false);
+  } catch(e) {
+    console.error('saveDB:', e);
+    cacheWrite(db); // sauvegarder quand même en local
+    if (!silent) showSaveIndicator('⚠ Sauvegardé en local', true);
   }
 }
 
 function scheduleSave() {
   clearTimeout(saveTimeout);
-  saveTimeout = setTimeout(()=>saveDB(),800);
+  saveTimeout = setTimeout(() => saveDB(), 800);
 }
 
-function showSaveIndicator(msg,isError) {
-  const el=document.getElementById('save-indicator');
-  el.textContent=msg;
-  el.className='save-indicator visible'+(isError?' error':'');
-  setTimeout(()=>{el.className='save-indicator';},2500);
+// ─── Indicateurs visuels ─────────────────────────────────────
+function setDbStatus(state, text) {
+  const dot  = document.getElementById('db-dot');
+  const span = document.getElementById('db-status-text');
+  if (!dot || !span) return;
+  dot.className  = 'db-dot' + (state === 'ok' ? ' ok' : state === 'err' ? ' err' : '');
+  span.textContent = text;
 }
 
-// ==================== ÉCRANS ====================
-function showLoginScreen() {
-  document.getElementById('loading-screen').style.display='none';
-  document.getElementById('login-screen').style.display='flex';
+function showSaveIndicator(msg, isError) {
+  const el = document.getElementById('save-indicator');
+  el.textContent = msg;
+  el.className = 'save-indicator visible' + (isError ? ' error' : '');
+  setTimeout(() => { el.className = 'save-indicator'; }, 2500);
 }
+
+// ─── AUTH ────────────────────────────────────────────────────
 function showLogin() {
-  document.getElementById('login-form').style.display='block';
-  document.getElementById('register-form').style.display='none';
+  document.getElementById('login-form').style.display = 'block';
+  document.getElementById('register-form').style.display = 'none';
 }
 function showRegister() {
-  document.getElementById('login-form').style.display='none';
-  document.getElementById('register-form').style.display='block';
+  document.getElementById('login-form').style.display = 'none';
+  document.getElementById('register-form').style.display = 'block';
 }
 
-// ==================== PERMISSIONS ====================
-function canAddNinja()      {return['admin','gerant'].includes(currentUser?.role);}
-function canAddFaute()      {return['admin','gerant','diplomate','apprenti'].includes(currentUser?.role);}
-function canDeleteFaute()   {return['admin','gerant'].includes(currentUser?.role);}
-function canManageTreasury(){return['admin','gerant','diplomate'].includes(currentUser?.role);}
-function canManageUsers()   {return currentUser?.role==='admin';}
-
-// ==================== AUTH ====================
 function doLogin() {
-  const u=document.getElementById('login-user').value.trim();
-  const p=document.getElementById('login-pass').value;
-  const err=document.getElementById('login-error');
-  const user=db.users.find(x=>x.username===u&&x.password===p);
-  if(!user){showErr(err,'Identifiant ou mot de passe incorrect.');return;}
-  if(!user.approved){showErr(err,'Votre compte est en attente de validation.');return;}
-  err.style.display='none';
-  currentUser=user;
-  document.getElementById('login-screen').style.display='none';
-  document.getElementById('app').style.cssText='display:flex;flex-direction:column;min-height:100vh;';
-  document.getElementById('user-display').textContent=user.username;
-  document.getElementById('role-display').textContent=ROLES[user.role]||user.role;
-  switchPage('ninjas'); refreshAll();
-}
-function doRegister() {
-  const u=document.getElementById('reg-user').value.trim();
-  const p=document.getElementById('reg-pass').value;
-  const p2=document.getElementById('reg-pass2').value;
-  const err=document.getElementById('reg-error');
-  if(!u){showErr(err,'Veuillez saisir un identifiant.');return;}
-  if(p.length<4){showErr(err,'Mot de passe trop court (min 4 car.).');return;}
-  if(p!==p2){showErr(err,'Les mots de passe ne correspondent pas.');return;}
-  if(db.users.find(x=>x.username===u)){showErr(err,'Identifiant déjà utilisé.');return;}
-  db.users.push({id:'u'+Date.now(),username:u,password:p,role:'observateur',approved:false});
-  scheduleSave(); showLogin();
-  const lerr=document.getElementById('login-error');
-  lerr.style.cssText='display:block;color:var(--konoha-green);font-style:italic;';
-  lerr.textContent="Compte créé ! En attente de validation par l'Administrateur.";
-}
-function doLogout() {
-  currentUser=null;
-  document.getElementById('app').style.display='none';
-  document.getElementById('login-screen').style.display='flex';
-  document.getElementById('login-user').value='';
-  document.getElementById('login-pass').value='';
-  document.getElementById('login-error').style.display='none';
-}
-function showErr(el,msg) {
-  el.style.cssText='display:block;color:var(--red-seal);font-style:italic;';
-  el.textContent=msg;
+  const u   = document.getElementById('login-user').value.trim();
+  const p   = document.getElementById('login-pass').value;
+  const err = document.getElementById('login-error');
+  const user = db.users.find(x => x.username === u && x.password === p);
+  if (!user)          { showErr(err, 'Identifiant ou mot de passe incorrect.'); return; }
+  if (!user.approved) { showErr(err, 'Votre compte est en attente de validation.'); return; }
+  err.style.display = 'none';
+  currentUser = user;
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').style.cssText = 'display:flex;flex-direction:column;min-height:100vh;';
+  document.getElementById('user-display').textContent = user.username;
+  document.getElementById('role-display').textContent  = ROLES[user.role] || user.role;
+  switchPage('ninjas');
+  refreshAll();
 }
 
-// ==================== NAVIGATION ====================
+function doRegister() {
+  const u   = document.getElementById('reg-user').value.trim();
+  const p   = document.getElementById('reg-pass').value;
+  const p2  = document.getElementById('reg-pass2').value;
+  const err = document.getElementById('reg-error');
+  if (!u)          { showErr(err, 'Veuillez saisir un identifiant.'); return; }
+  if (p.length < 4){ showErr(err, 'Mot de passe trop court (min 4 car.).'); return; }
+  if (p !== p2)    { showErr(err, 'Les mots de passe ne correspondent pas.'); return; }
+  if (db.users.find(x => x.username === u)) { showErr(err, 'Identifiant déjà utilisé.'); return; }
+  db.users.push({ id:'u'+Date.now(), username:u, password:p, role:'observateur', approved:false });
+  scheduleSave();
+  showLogin();
+  const lerr = document.getElementById('login-error');
+  lerr.style.cssText = 'display:block;color:var(--konoha-green);font-style:italic;';
+  lerr.textContent   = "Compte créé ! En attente de validation par l'Administrateur.";
+}
+
+function doLogout() {
+  currentUser = null;
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('login-user').value = '';
+  document.getElementById('login-pass').value = '';
+  document.getElementById('login-error').style.display = 'none';
+  // Re-sync au cas où des données ont changé pendant la session
+  fetchRemoteDB();
+}
+
+function showErr(el, msg) {
+  el.style.cssText = 'display:block;color:var(--red-seal);font-style:italic;';
+  el.textContent = msg;
+}
+
+// ─── PERMISSIONS ─────────────────────────────────────────────
+function canAddNinja()       { return ['admin','gerant'].includes(currentUser?.role); }
+function canAddFaute()       { return ['admin','gerant','diplomate','apprenti'].includes(currentUser?.role); }
+function canDeleteFaute()    { return ['admin','gerant'].includes(currentUser?.role); }
+function canManageTreasury() { return ['admin','gerant','diplomate'].includes(currentUser?.role); }
+function canManageUsers()    { return currentUser?.role === 'admin'; }
+
+// ─── NAVIGATION ──────────────────────────────────────────────
 function switchPage(page) {
-  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
-  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('page-'+page).classList.add('active');
   document.getElementById('nav-'+page).classList.add('active');
-  if(page==='ninjas')     refreshNinjas();
-  if(page==='fautes')     {refreshNinjaSelect();refreshFautes();}
-  if(page==='alertes')    refreshAlertes();
-  if(page==='tresorerie') refreshTreasury();
-  if(page==='comptes')    refreshComptes();
+  if (page==='ninjas')     refreshNinjas();
+  if (page==='fautes')     { refreshNinjaSelect(); refreshFautes(); }
+  if (page==='alertes')    refreshAlertes();
+  if (page==='tresorerie') refreshTreasury();
+  if (page==='comptes')    refreshComptes();
 }
 function refreshAll() {
-  refreshNinjas();refreshNinjaSelect();refreshFautes();
-  refreshAlertes();refreshTreasury();refreshComptes();updateBadge();
+  refreshNinjas(); refreshNinjaSelect(); refreshFautes();
+  refreshAlertes(); refreshTreasury(); refreshComptes(); updateBadge();
 }
 
-// ==================== PHOTO ====================
+// ─── PHOTO ───────────────────────────────────────────────────
 function previewPhoto(e) {
-  const file=e.target.files[0]; if(!file)return;
-  const reader=new FileReader();
-  reader.onload=ev=>{
-    pendingPhoto=ev.target.result;
-    const prev=document.getElementById('n-photo-preview');
-    prev.src=pendingPhoto; prev.style.display='block';
-    document.getElementById('n-photo-placeholder').style.display='none';
+  const file = e.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    pendingPhoto = ev.target.result;
+    const prev = document.getElementById('n-photo-preview');
+    prev.src = pendingPhoto; prev.style.display = 'block';
+    document.getElementById('n-photo-placeholder').style.display = 'none';
   };
   reader.readAsDataURL(file);
 }
 function clearPhoto() {
-  pendingPhoto=null;
-  document.getElementById('n-photo-preview').style.display='none';
-  document.getElementById('n-photo-input').value='';
-  document.getElementById('n-photo-placeholder').style.display='block';
+  pendingPhoto = null;
+  document.getElementById('n-photo-preview').style.display = 'none';
+  document.getElementById('n-photo-input').value = '';
+  document.getElementById('n-photo-placeholder').style.display = 'block';
 }
 
-// ==================== NINJAS ====================
-function gradeClass(g){return 'grade-'+g.replace(/\s/g,'_');}
+// ─── NINJAS ──────────────────────────────────────────────────
+function gradeClass(g) { return 'grade-' + g.replace(/\s/g,'_'); }
+
 function addNinja() {
-  if(!canAddNinja())return;
-  const prenom=document.getElementById('n-prenom').value.trim();
-  const nom=document.getElementById('n-nom').value.trim();
-  const grade=document.getElementById('n-grade').value;
-  const village=document.getElementById('n-village').value;
-  if(!prenom||!nom||!grade){alert('Remplissez les champs obligatoires.');return;}
-  db.ninjas.push({id:'n'+Date.now(),prenom,nom,grade,village,photo:pendingPhoto});
-  document.getElementById('n-prenom').value='';
-  document.getElementById('n-nom').value='';
-  document.getElementById('n-grade').value='';
+  if (!canAddNinja()) return;
+  const prenom  = document.getElementById('n-prenom').value.trim();
+  const nom     = document.getElementById('n-nom').value.trim();
+  const grade   = document.getElementById('n-grade').value;
+  const village = document.getElementById('n-village').value;
+  if (!prenom||!nom||!grade) { alert('Remplissez les champs obligatoires.'); return; }
+  db.ninjas.push({ id:'n'+Date.now(), prenom, nom, grade, village, photo: pendingPhoto });
+  document.getElementById('n-prenom').value = '';
+  document.getElementById('n-nom').value = '';
+  document.getElementById('n-grade').value = '';
   clearPhoto(); refreshNinjas(); refreshNinjaSelect(); scheduleSave();
 }
 function deleteNinja(id) {
-  if(!canAddNinja())return;
-  if(!confirm('Supprimer définitivement ce ninja des archives ?'))return;
-  db.ninjas=db.ninjas.filter(n=>n.id!==id);
-  refreshNinjas();refreshNinjaSelect();refreshFautes();refreshAlertes();updateBadge();
+  if (!canAddNinja()) return;
+  if (!confirm('Supprimer définitivement ce ninja des archives ?')) return;
+  db.ninjas = db.ninjas.filter(n => n.id !== id);
+  refreshNinjas(); refreshNinjaSelect(); refreshFautes(); refreshAlertes(); updateBadge();
   scheduleSave();
 }
 function refreshNinjas() {
-  document.getElementById('ninja-add-section').style.display=canAddNinja()?'':'none';
-  const query=(document.getElementById('ninja-search')?.value||'').toLowerCase().trim();
-  const tbody=document.getElementById('ninja-tbody');
-  const empty=document.getElementById('ninja-empty');
-  const noRes=document.getElementById('ninja-noresult');
-  if(db.ninjas.length===0){tbody.innerHTML='';empty.style.display='block';noRes.style.display='none';return;}
-  empty.style.display='none';
-  const list=query?db.ninjas.filter(n=>
-    n.prenom.toLowerCase().includes(query)||n.nom.toLowerCase().includes(query)||
-    n.grade.toLowerCase().includes(query)||n.village.toLowerCase().includes(query)):db.ninjas;
-  if(list.length===0){tbody.innerHTML='';noRes.style.display='block';return;}
-  noRes.style.display='none'; tbody.innerHTML='';
-  list.forEach(n=>{
-    const fCount=db.fautes.filter(f=>f.ninjaId===n.id).length;
-    const gc=gradeClass(n.grade);
-    const avatar=n.photo
-      ?`<div class="ninja-avatar"><img src="${n.photo}" alt="${n.prenom}" /></div>`
-      :`<div class="ninja-avatar">${n.prenom[0]||'?'}</div>`;
-    const tr=document.createElement('tr');
-    tr.innerHTML=`<td>${avatar}</td><td>${n.prenom}</td><td>${n.nom}</td>
+  document.getElementById('ninja-add-section').style.display = canAddNinja() ? '' : 'none';
+  const query = (document.getElementById('ninja-search')?.value||'').toLowerCase().trim();
+  const tbody = document.getElementById('ninja-tbody');
+  const empty = document.getElementById('ninja-empty');
+  const noRes = document.getElementById('ninja-noresult');
+  if (db.ninjas.length === 0) { tbody.innerHTML=''; empty.style.display='block'; noRes.style.display='none'; return; }
+  empty.style.display = 'none';
+  const list = query ? db.ninjas.filter(n =>
+    n.prenom.toLowerCase().includes(query) || n.nom.toLowerCase().includes(query) ||
+    n.grade.toLowerCase().includes(query)  || n.village.toLowerCase().includes(query)) : db.ninjas;
+  if (list.length === 0) { tbody.innerHTML=''; noRes.style.display='block'; return; }
+  noRes.style.display = 'none'; tbody.innerHTML = '';
+  list.forEach(n => {
+    const fCount = db.fautes.filter(f => f.ninjaId === n.id).length;
+    const gc = gradeClass(n.grade);
+    const avatar = n.photo
+      ? `<div class="ninja-avatar"><img src="${n.photo}" alt="${n.prenom}" /></div>`
+      : `<div class="ninja-avatar">${n.prenom[0]||'?'}</div>`;
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${avatar}</td><td>${n.prenom}</td><td>${n.nom}</td>
       <td><span class="grade-badge ${gc}">${n.grade}</span></td>
       <td><span class="village-badge village-${n.village}">${n.village}</span></td>
       <td style="font-family:'Cinzel',serif;font-size:0.85rem;color:${fCount>=3?'var(--red-seal)':'var(--ink)'};">${fCount}${fCount>=3?' ⚠':''}</td>
@@ -581,49 +644,49 @@ function refreshNinjas() {
   });
 }
 function refreshNinjaSelect() {
-  const sel=document.getElementById('f-ninja'); if(!sel)return;
-  const cur=sel.value;
-  sel.innerHTML='<option value="">— Sélectionner un ninja —</option>';
-  db.ninjas.forEach(n=>{
-    const opt=document.createElement('option');
-    opt.value=n.id; opt.textContent=`${n.prenom} ${n.nom} (${n.grade})`;
-    if(n.id===cur)opt.selected=true; sel.appendChild(opt);
+  const sel = document.getElementById('f-ninja'); if (!sel) return;
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">— Sélectionner un ninja —</option>';
+  db.ninjas.forEach(n => {
+    const opt = document.createElement('option');
+    opt.value = n.id; opt.textContent = `${n.prenom} ${n.nom} (${n.grade})`;
+    if (n.id === cur) opt.selected = true; sel.appendChild(opt);
   });
 }
 
-// ==================== FAUTES ====================
+// ─── FAUTES ──────────────────────────────────────────────────
 function addFaute() {
-  if(!canAddFaute())return;
-  const type=document.querySelector('input[name="faute-type"]:checked')?.value;
-  const village=document.querySelector('input[name="faute-village"]:checked')?.value;
-  const ninjaId=document.getElementById('f-ninja').value;
-  const details=document.getElementById('f-details').value.trim();
-  if(!ninjaId||!details){alert('Sélectionnez un ninja et ajoutez des détails.');return;}
-  db.fautes.push({id:'f'+Date.now(),type,village,ninjaId,details,
-    date:new Date().toLocaleDateString('fr-FR'),author:currentUser.username});
-  document.getElementById('f-details').value='';
-  document.getElementById('f-ninja').value='';
-  refreshFautes();refreshNinjas();refreshAlertes();updateBadge();scheduleSave();
+  if (!canAddFaute()) return;
+  const type    = document.querySelector('input[name="faute-type"]:checked')?.value;
+  const village = document.querySelector('input[name="faute-village"]:checked')?.value;
+  const ninjaId = document.getElementById('f-ninja').value;
+  const details = document.getElementById('f-details').value.trim();
+  if (!ninjaId||!details) { alert('Sélectionnez un ninja et ajoutez des détails.'); return; }
+  db.fautes.push({ id:'f'+Date.now(), type, village, ninjaId, details,
+    date: new Date().toLocaleDateString('fr-FR'), author: currentUser.username });
+  document.getElementById('f-details').value = '';
+  document.getElementById('f-ninja').value = '';
+  refreshFautes(); refreshNinjas(); refreshAlertes(); updateBadge(); scheduleSave();
 }
 function deleteFaute(id) {
-  if(!canDeleteFaute())return;
-  if(!confirm('Supprimer cette faute des archives ?'))return;
-  db.fautes=db.fautes.filter(f=>f.id!==id);
-  refreshFautes();refreshNinjas();refreshAlertes();updateBadge();scheduleSave();
+  if (!canDeleteFaute()) return;
+  if (!confirm('Supprimer cette faute des archives ?')) return;
+  db.fautes = db.fautes.filter(f => f.id !== id);
+  refreshFautes(); refreshNinjas(); refreshAlertes(); updateBadge(); scheduleSave();
 }
 function refreshFautes() {
-  document.getElementById('faute-add-section').style.display=canAddFaute()?'':'none';
-  const tbody=document.getElementById('faute-tbody');
-  const empty=document.getElementById('faute-empty');
-  tbody.innerHTML='';
-  if(db.fautes.length===0){empty.style.display='block';return;}
-  empty.style.display='none';
-  [...db.fautes].reverse().forEach(f=>{
-    const ninja=db.ninjas.find(n=>n.id===f.ninjaId);
-    const name=ninja?`${ninja.prenom} ${ninja.nom}`:'Inconnu';
-    const typeKey=f.type==='Crime de guerre'?'Crime':'Brise';
-    const tr=document.createElement('tr');
-    tr.innerHTML=`<td style="white-space:nowrap;">${f.date}</td>
+  document.getElementById('faute-add-section').style.display = canAddFaute() ? '' : 'none';
+  const tbody = document.getElementById('faute-tbody');
+  const empty = document.getElementById('faute-empty');
+  tbody.innerHTML = '';
+  if (db.fautes.length === 0) { empty.style.display='block'; return; }
+  empty.style.display = 'none';
+  [...db.fautes].reverse().forEach(f => {
+    const ninja = db.ninjas.find(n => n.id === f.ninjaId);
+    const name  = ninja ? `${ninja.prenom} ${ninja.nom}` : 'Inconnu';
+    const typeKey = f.type === 'Crime de guerre' ? 'Crime' : 'Brise';
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td style="white-space:nowrap;">${f.date}</td>
       <td><span class="fault-pill fault-${typeKey}">${f.type}</span></td>
       <td>${name}</td>
       <td><span class="village-badge village-${f.village}">${f.village}</span></td>
@@ -633,26 +696,26 @@ function refreshFautes() {
   });
 }
 
-// ==================== ALERTES ====================
+// ─── ALERTES ─────────────────────────────────────────────────
 function updateBadge() {
-  const count=db.ninjas.filter(n=>db.fautes.filter(f=>f.ninjaId===n.id).length>=3).length;
-  const badge=document.getElementById('alert-badge');
-  badge.style.display=count>0?'flex':'none'; badge.textContent=count;
+  const count = db.ninjas.filter(n => db.fautes.filter(f => f.ninjaId===n.id).length >= 3).length;
+  const badge = document.getElementById('alert-badge');
+  badge.style.display = count > 0 ? 'flex' : 'none'; badge.textContent = count;
 }
 function refreshAlertes() {
-  const list=document.getElementById('alerte-list');
-  const empty=document.getElementById('alerte-empty');
-  const flagged=db.ninjas.filter(n=>db.fautes.filter(f=>f.ninjaId===n.id).length>=3);
-  list.innerHTML='';
-  if(flagged.length===0){empty.style.display='block';return;}
-  empty.style.display='none';
-  flagged.forEach(n=>{
-    const faults=db.fautes.filter(f=>f.ninjaId===n.id);
-    const avatar=n.photo
-      ?`<img src="${n.photo}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;border:1.5px solid var(--red-seal);" />`
-      :`<div style="width:40px;height:40px;border-radius:50%;background:var(--parch-mid);border:1.5px solid var(--red-seal);display:flex;align-items:center;justify-content:center;font-family:'Noto Serif JP',serif;font-size:1rem;color:var(--ink-light);">${n.prenom[0]}</div>`;
-    const div=document.createElement('div'); div.className='alert-card';
-    div.innerHTML=`<div style="display:flex;align-items:center;gap:12px;">${avatar}
+  const list    = document.getElementById('alerte-list');
+  const empty   = document.getElementById('alerte-empty');
+  const flagged = db.ninjas.filter(n => db.fautes.filter(f => f.ninjaId===n.id).length >= 3);
+  list.innerHTML = '';
+  if (flagged.length === 0) { empty.style.display='block'; return; }
+  empty.style.display = 'none';
+  flagged.forEach(n => {
+    const faults = db.fautes.filter(f => f.ninjaId === n.id);
+    const avatar = n.photo
+      ? `<img src="${n.photo}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;border:1.5px solid var(--red-seal);" />`
+      : `<div style="width:40px;height:40px;border-radius:50%;background:var(--parch-mid);border:1.5px solid var(--red-seal);display:flex;align-items:center;justify-content:center;font-family:'Noto Serif JP',serif;font-size:1rem;color:var(--ink-light);">${n.prenom[0]}</div>`;
+    const div = document.createElement('div'); div.className = 'alert-card';
+    div.innerHTML = `<div style="display:flex;align-items:center;gap:12px;">${avatar}
       <div>
         <div style="font-family:'Cinzel',serif;font-size:1rem;">${n.prenom} ${n.nom}</div>
         <div style="font-size:0.82rem;color:var(--red-seal);font-style:italic;">${faults.length} faute(s) — <span class="village-badge village-${n.village}">${n.village}</span></div>
@@ -662,22 +725,22 @@ function refreshAlertes() {
   });
 }
 function openDossier(ninjaId) {
-  const n=db.ninjas.find(x=>x.id===ninjaId);
-  const faults=db.fautes.filter(f=>f.ninjaId===ninjaId);
-  const gc=gradeClass(n.grade);
-  document.getElementById('dossier-title').textContent=`Dossier : ${n.prenom} ${n.nom}`;
-  const avatar=n.photo
-    ?`<img src="${n.photo}" style="width:64px;height:64px;border-radius:50%;object-fit:cover;border:2px solid var(--parch-edge);" />`
-    :`<div style="width:64px;height:64px;border-radius:50%;background:var(--parch-mid);border:2px solid var(--parch-edge);display:flex;align-items:center;justify-content:center;font-family:'Noto Serif JP',serif;font-size:1.5rem;color:var(--ink-light);">${n.prenom[0]}</div>`;
-  let html=`<div style="display:flex;gap:14px;align-items:center;margin-bottom:1.5rem;padding-bottom:1rem;border-bottom:1px solid var(--parch-edge);">
+  const n      = db.ninjas.find(x => x.id === ninjaId);
+  const faults = db.fautes.filter(f => f.ninjaId === ninjaId);
+  const gc     = gradeClass(n.grade);
+  document.getElementById('dossier-title').textContent = `Dossier : ${n.prenom} ${n.nom}`;
+  const avatar = n.photo
+    ? `<img src="${n.photo}" style="width:64px;height:64px;border-radius:50%;object-fit:cover;border:2px solid var(--parch-edge);" />`
+    : `<div style="width:64px;height:64px;border-radius:50%;background:var(--parch-mid);border:2px solid var(--parch-edge);display:flex;align-items:center;justify-content:center;font-family:'Noto Serif JP',serif;font-size:1.5rem;color:var(--ink-light);">${n.prenom[0]}</div>`;
+  let html = `<div style="display:flex;gap:14px;align-items:center;margin-bottom:1.5rem;padding-bottom:1rem;border-bottom:1px solid var(--parch-edge);">
     ${avatar}<div>
       <div style="font-family:'Cinzel',serif;font-size:1rem;margin-bottom:6px;">${n.prenom} ${n.nom}</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;"><span class="grade-badge ${gc}">${n.grade}</span><span class="village-badge village-${n.village}">${n.village}</span></div>
     </div></div>
     <div style="font-family:'Cinzel',serif;font-size:0.75rem;color:var(--ink-fade);letter-spacing:0.1em;margin-bottom:1rem;">INFRACTIONS RÉPERTORIÉES (${faults.length})</div>`;
-  faults.forEach(f=>{
-    const tk=f.type==='Crime de guerre'?'Crime':'Brise';
-    html+=`<div style="margin-bottom:1rem;padding:0.8rem;background:rgba(184,149,90,0.1);border-left:3px solid var(--red-seal);border-radius:2px;">
+  faults.forEach(f => {
+    const tk = f.type === 'Crime de guerre' ? 'Crime' : 'Brise';
+    html += `<div style="margin-bottom:1rem;padding:0.8rem;background:rgba(184,149,90,0.1);border-left:3px solid var(--red-seal);border-radius:2px;">
       <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px;flex-wrap:wrap;">
         <span class="fault-pill fault-${tk}">${f.type}</span>
         <span style="font-size:0.75rem;color:var(--ink-light);">${f.date}</span>
@@ -686,92 +749,92 @@ function openDossier(ninjaId) {
       <div style="font-size:0.85rem;font-style:italic;color:var(--ink-fade);">${f.details}</div>
     </div>`;
   });
-  document.getElementById('dossier-content').innerHTML=html;
+  document.getElementById('dossier-content').innerHTML = html;
   document.getElementById('modal-dossier').classList.add('open');
 }
 
-// ==================== TRESORERIE ====================
+// ─── TRESORERIE ───────────────────────────────────────────────
 function openTxModal(mode) {
-  if(!canManageTreasury()){alert('Votre grade ne permet pas cette action.');return;}
-  txMode=mode;
-  document.getElementById('tx-modal-title').textContent=mode==='add'?'+ Ajout de fonds':'− Retrait de fonds';
-  document.getElementById('tx-amount').value='';
-  document.getElementById('tx-detail').value='';
+  if (!canManageTreasury()) { alert('Votre grade ne permet pas cette action.'); return; }
+  txMode = mode;
+  document.getElementById('tx-modal-title').textContent = mode==='add' ? '+ Ajout de fonds' : '− Retrait de fonds';
+  document.getElementById('tx-amount').value = '';
+  document.getElementById('tx-detail').value = '';
   document.getElementById('modal-tx').classList.add('open');
 }
 function confirmTx() {
-  const amount=parseInt(document.getElementById('tx-amount').value);
-  const detail=document.getElementById('tx-detail').value.trim();
-  if(!amount||amount<=0){alert('Montant invalide.');return;}
-  if(!detail){alert('Veuillez ajouter un motif.');return;}
-  if(txMode==='remove'&&amount>db.balance){alert('Fonds insuffisants.');return;}
-  db.balance+=(txMode==='add'?1:-1)*amount;
-  db.transactions.unshift({id:'t'+Date.now(),mode:txMode,amount,detail,
-    date:new Date().toLocaleDateString('fr-FR'),author:currentUser.username});
+  const amount = parseInt(document.getElementById('tx-amount').value);
+  const detail = document.getElementById('tx-detail').value.trim();
+  if (!amount||amount<=0) { alert('Montant invalide.'); return; }
+  if (!detail)            { alert('Veuillez ajouter un motif.'); return; }
+  if (txMode==='remove'&&amount>db.balance) { alert('Fonds insuffisants.'); return; }
+  db.balance += (txMode==='add'?1:-1)*amount;
+  db.transactions.unshift({ id:'t'+Date.now(), mode:txMode, amount, detail,
+    date: new Date().toLocaleDateString('fr-FR'), author: currentUser.username });
   closeModal('modal-tx'); refreshTreasury(); scheduleSave();
 }
 function refreshTreasury() {
-  document.getElementById('treasury-btns').style.display=canManageTreasury()?'':'none';
-  document.getElementById('balance-display').textContent=db.balance.toLocaleString('fr-FR')+' Ryō';
-  const list=document.getElementById('tx-list');
-  const empty=document.getElementById('tx-empty');
-  list.innerHTML='';
-  if(db.transactions.length===0){empty.style.display='block';return;}
-  empty.style.display='none';
-  db.transactions.forEach(tx=>{
-    const div=document.createElement('div'); div.className='tx-row';
-    div.innerHTML=`<div class="tx-sign ${tx.mode==='add'?'plus':'minus'}">${tx.mode==='add'?'+':'−'}</div>
+  document.getElementById('treasury-btns').style.display = canManageTreasury() ? '' : 'none';
+  document.getElementById('balance-display').textContent = db.balance.toLocaleString('fr-FR') + ' Ryō';
+  const list  = document.getElementById('tx-list');
+  const empty = document.getElementById('tx-empty');
+  list.innerHTML = '';
+  if (db.transactions.length===0) { empty.style.display='block'; return; }
+  empty.style.display = 'none';
+  db.transactions.forEach(tx => {
+    const div = document.createElement('div'); div.className = 'tx-row';
+    div.innerHTML = `<div class="tx-sign ${tx.mode==='add'?'plus':'minus'}">${tx.mode==='add'?'+':'−'}</div>
       <div class="tx-detail-col"><div>${tx.detail}</div><div class="tx-meta">${tx.date} · par ${tx.author}</div></div>
       <div class="tx-amount ${tx.mode==='add'?'plus':'minus'}">${tx.mode==='add'?'+':'−'}${tx.amount.toLocaleString('fr-FR')} Ryō</div>`;
     list.appendChild(div);
   });
 }
 
-// ==================== COMPTES ====================
+// ─── COMPTES ─────────────────────────────────────────────────
 function refreshComptes() {
-  const cont=document.getElementById('comptes-content');
-  if(!canManageUsers()){
-    cont.innerHTML=`<div class="access-denied"><div style="font-family:'Cinzel',serif;font-size:1.1rem;">⊗ Accès Restreint</div><p>Seul l'Administrateur peut gérer les comptes diplomatiques.</p></div>`;
+  const cont = document.getElementById('comptes-content');
+  if (!canManageUsers()) {
+    cont.innerHTML = `<div class="access-denied"><div style="font-family:'Cinzel',serif;font-size:1.1rem;">⊗ Accès Restreint</div><p>Seul l'Administrateur peut gérer les comptes diplomatiques.</p></div>`;
     return;
   }
-  let html=`<table><thead><tr><th>Identifiant</th><th>Grade</th><th>Statut</th><th>Actions</th></tr></thead><tbody>`;
-  db.users.forEach(u=>{
-    const status=u.approved
-      ?`<span style="color:var(--konoha-green);font-size:0.8rem;">✓ Actif</span>`
-      :`<span style="color:var(--red-seal);font-size:0.8rem;">En attente</span>`;
-    const actions=u.id!=='u0'
-      ?`<div style="display:flex;gap:6px;"><button class="btn btn-ghost btn-sm" onclick="openRoleModal('${u.id}','${u.username}')">Grade</button>${!u.approved?`<button class="btn btn-success btn-sm" onclick="approveUser('${u.id}')">Valider</button>`:''}</div>`
-      :`<span style="font-size:0.75rem;color:var(--ink-fade);">Compte système</span>`;
-    html+=`<tr><td>${u.username}</td><td><span class="role-${u.role}">${ROLES[u.role]||u.role}</span></td><td>${status}</td><td>${actions}</td></tr>`;
+  let html = `<table><thead><tr><th>Identifiant</th><th>Grade</th><th>Statut</th><th>Actions</th></tr></thead><tbody>`;
+  db.users.forEach(u => {
+    const status = u.approved
+      ? `<span style="color:var(--konoha-green);font-size:0.8rem;">✓ Actif</span>`
+      : `<span style="color:var(--red-seal);font-size:0.8rem;">En attente</span>`;
+    const actions = u.id !== 'u0'
+      ? `<div style="display:flex;gap:6px;"><button class="btn btn-ghost btn-sm" onclick="openRoleModal('${u.id}','${u.username}')">Grade</button>${!u.approved?`<button class="btn btn-success btn-sm" onclick="approveUser('${u.id}')">Valider</button>`:''}</div>`
+      : `<span style="font-size:0.75rem;color:var(--ink-fade);">Compte système</span>`;
+    html += `<tr><td>${u.username}</td><td><span class="role-${u.role}">${ROLES[u.role]||u.role}</span></td><td>${status}</td><td>${actions}</td></tr>`;
   });
-  html+=`</tbody></table>`; cont.innerHTML=html;
+  html += `</tbody></table>`; cont.innerHTML = html;
 }
 function approveUser(id) {
-  const u=db.users.find(x=>x.id===id); if(u)u.approved=true;
+  const u = db.users.find(x => x.id===id); if (u) u.approved = true;
   refreshComptes(); scheduleSave();
 }
-function openRoleModal(id,username) {
-  roleTargetId=id;
-  document.getElementById('role-username').textContent='Shinobi : '+username;
-  const u=db.users.find(x=>x.id===id);
-  if(u)document.getElementById('role-select').value=u.role;
+function openRoleModal(id, username) {
+  roleTargetId = id;
+  document.getElementById('role-username').textContent = 'Shinobi : ' + username;
+  const u = db.users.find(x => x.id===id);
+  if (u) document.getElementById('role-select').value = u.role;
   document.getElementById('modal-role').classList.add('open');
 }
 function confirmRole() {
-  const newRole=document.getElementById('role-select').value;
-  const u=db.users.find(x=>x.id===roleTargetId);
-  if(u)u.role=newRole;
+  const newRole = document.getElementById('role-select').value;
+  const u = db.users.find(x => x.id===roleTargetId);
+  if (u) u.role = newRole;
   closeModal('modal-role'); refreshComptes(); scheduleSave();
 }
 
-// ==================== MODALS ====================
-function closeModal(id){document.getElementById(id).classList.remove('open');}
-document.querySelectorAll('.modal-overlay').forEach(m=>{
-  m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('open');});
+// ─── MODALS ───────────────────────────────────────────────────
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.modal-overlay').forEach(m => {
+  m.addEventListener('click', e => { if (e.target===m) m.classList.remove('open'); });
 });
 
-// ==================== DÉMARRAGE ====================
-loadDB();
+// ─── DÉMARRAGE ────────────────────────────────────────────────
+loadDB(); // affiche le login immédiatement + charge la DB en arrière-plan
 </script>
 </body>
 </html>
