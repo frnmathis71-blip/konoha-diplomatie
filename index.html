@@ -368,43 +368,52 @@ let currentUser=null, txMode='add', roleTargetId=null, pendingPhoto=null, saveTi
 
 // ==================== JSONBin ====================
 async function loadDB() {
-  if (BIN_ID==="VOTRE_BIN_ID_ICI" || API_KEY==="VOTRE_API_KEY_ICI") {
-    console.warn("JSONBin non configuré — mode local.");
-    showLoginScreen(); return;
-  }
   try {
     const res = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`, {
-      headers:{"X-Master-Key":API_KEY,"X-Bin-Meta":"false"}
+      headers: {
+        "X-Master-Key": API_KEY
+      }
     });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
-    // Si la structure est valide on l'utilise, sinon on repart du défaut
-    if (data && Array.isArray(data.users)) {
-      db = data;
-    } else {
-      db = JSON.parse(JSON.stringify(DEFAULT_DB));
-      await saveDB(true);
+
+    const text = await res.text();
+    console.log("JSONBin réponse :", res.status, text);
+
+    if (!res.ok) {
+      alert("Erreur JSONBin " + res.status + " : " + text);
+      return;
     }
-  } catch(e) {
-    console.error("loadDB :", e);
-    showSaveIndicator("⚠ Erreur chargement — mode local", true);
+
+    const data = JSON.parse(text);
+    db = data.record;
+    refreshAll();
+
+  } catch (e) {
+    console.error(e);
+    alert("Erreur réseau ou CORS : regarde la console F12.");
   }
-  showLoginScreen();
 }
 
-async function saveDB(silent=false) {
-  if (BIN_ID==="VOTRE_BIN_ID_ICI" || API_KEY==="VOTRE_API_KEY_ICI") return;
+async function saveDB() {
   try {
     const res = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
-      method:"PUT",
-      headers:{"Content-Type":"application/json","X-Master-Key":API_KEY},
-      body:JSON.stringify(db)
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Master-Key": API_KEY
+      },
+      body: JSON.stringify(db)
     });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    if (!silent) showSaveIndicator("✓ Sauvegardé",false);
-  } catch(e) {
-    console.error("saveDB :",e);
-    showSaveIndicator("✗ Erreur sauvegarde",true);
+
+    const text = await res.text();
+    console.log("Sauvegarde JSONBin :", res.status, text);
+
+    if (!res.ok) {
+      alert("Erreur sauvegarde JSONBin " + res.status + " : " + text);
+    }
+
+  } catch (e) {
+    console.error(e);
+    alert("Erreur sauvegarde réseau ou CORS.");
   }
 }
 
