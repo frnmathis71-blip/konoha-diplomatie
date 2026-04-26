@@ -464,6 +464,43 @@ let db = {
   balance: 0
 };
 
+async function loadDB() {
+  try {
+    const res = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`, {
+      headers: {
+        "X-Master-Key": API_KEY
+      }
+    });
+
+    const data = await res.json();
+
+    if (data.record) {
+      db = data.record;
+    }
+
+    refreshAll();
+  } catch (e) {
+    console.error(e);
+    alert("Impossible de charger la base de données.");
+  }
+}
+
+async function saveDB() {
+  try {
+    await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Master-Key": API_KEY
+      },
+      body: JSON.stringify(db)
+    });
+  } catch (e) {
+    console.error(e);
+    alert("Erreur : les données n'ont pas été sauvegardées.");
+  }
+}
+
 let currentUser = null;
 let txMode = 'add';
 let roleTargetId = null;
@@ -523,6 +560,7 @@ function doRegister() {
   lerr.style.display = 'block';
   lerr.style.color = 'var(--konoha-green)';
   lerr.textContent = 'Compte créé ! En attente de validation par l\'Administrateur.';
+  saveDB();
 }
 
 function doLogout() {
@@ -601,6 +639,7 @@ function addNinja() {
   clearPhoto();
   refreshNinjas();
   refreshNinjaSelect();
+  saveDB();
 }
 
 function deleteNinja(id) {
@@ -612,6 +651,7 @@ function deleteNinja(id) {
   refreshFautes();
   refreshAlertes();
   updateBadge();
+  saveDB();
 }
 
 function refreshNinjas() {
@@ -701,6 +741,7 @@ function addFaute() {
   refreshNinjas();
   refreshAlertes();
   updateBadge();
+  saveDB();
 }
 
 function deleteFaute(id) {
@@ -711,6 +752,7 @@ function deleteFaute(id) {
   refreshNinjas();
   refreshAlertes();
   updateBadge();
+  saveDB();
 }
 
 function refreshFautes() {
@@ -839,6 +881,7 @@ function confirmTx() {
   });
   closeModal('modal-tx');
   refreshTreasury();
+  saveDB();
 }
 
 function refreshTreasury() {
@@ -906,6 +949,7 @@ function approveUser(id) {
   const u = db.users.find(x => x.id === id);
   if (u) u.approved = true;
   refreshComptes();
+  saveDB();
 }
 
 function openRoleModal(id, username) {
@@ -922,6 +966,7 @@ function confirmRole() {
   if (u) u.role = newRole;
   closeModal('modal-role');
   refreshComptes();
+  saveDB();
 }
 
 // ==================== MODALS ====================
