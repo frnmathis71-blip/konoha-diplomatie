@@ -1386,6 +1386,21 @@ document.getElementById('confirm-paye').addEventListener('click', e => {
   if (e.target===document.getElementById('confirm-paye')) closeConfirmPaye();
 });
 
+Object.assign(window, {
+  showLogin, showRegister, doLogin, doRegister, doLogout,
+  switchPage, previewPhoto, clearPhoto,
+  addNinja, deleteNinja, refreshNinjas,
+  addFaute, deleteFaute,
+  openDossier, envoyerJugement, confirmJugement,
+  cloturerJugement, ouvrirEditJugement, sauvegarderJugement,
+  supprimerJugement, openProfil,
+  openTxModal, confirmTx,
+  toggleDetteNinja, addDette, ouvrirConfirmPaye,
+  closeConfirmPaye, confirmerPaye,
+  approveUser, openRoleModal, confirmRole,
+  closeModal
+});
+
 loadDB();
 </script>
 </body>
