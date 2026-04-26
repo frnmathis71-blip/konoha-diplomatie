@@ -150,15 +150,19 @@
   .confirm-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:300;display:none;align-items:center;justify-content:center;}
   .confirm-overlay.open{display:flex;}
   .confirm-box{background:var(--parch-light);border:2px solid var(--parch-edge);border-radius:4px;padding:2rem;max-width:380px;width:90%;box-shadow:0 10px 40px rgba(0,0,0,0.6);}
-  /* Casier styles */
   .casier-action{padding:8px 12px;border-bottom:1px solid rgba(184,149,90,0.25);display:flex;align-items:flex-start;gap:10px;font-size:0.83rem;}
   .casier-action:last-child{border-bottom:none;}
   .casier-icon{font-size:1rem;flex-shrink:0;margin-top:1px;}
   .casier-detail{flex:1;color:var(--ink);}
   .casier-meta{font-size:0.7rem;color:var(--ink-light);font-style:italic;margin-top:2px;}
-  /* Faute clickable row */
   .faute-row-clickable{cursor:pointer;}
   .faute-row-clickable:hover td{background:rgba(139,26,26,0.06);}
+  /* Toggle paiement dans le modal faute */
+  .paye-toggle-btn{display:flex;align-items:center;gap:10px;padding:10px 16px;border-radius:3px;cursor:pointer;border:1.5px solid;font-family:'Cinzel',serif;font-size:0.82rem;letter-spacing:0.06em;transition:all 0.2s;margin-top:1rem;width:100%;justify-content:center;}
+  .paye-toggle-btn.non{background:#fde8e8;color:var(--red-seal);border-color:var(--red-seal);}
+  .paye-toggle-btn.non:hover{background:#fbd0d0;}
+  .paye-toggle-btn.oui{background:#e8f5e8;color:var(--konoha-green);border-color:var(--konoha-green);}
+  .paye-toggle-btn.oui:hover{background:#d0edd0;}
 </style>
 </head>
 <body>
@@ -169,12 +173,8 @@
     <div style="font-family:'Cinzel',serif;font-size:1rem;letter-spacing:0.2em;text-align:center;color:var(--ink);margin-bottom:0.2rem;">DIPLOMATIE DE KONOHA</div>
     <div class="login-sub">Archives diplomatiques — Accès sécurisé</div>
     <div class="seal-divider"><span class="seal-symbol">⊕</span></div>
-
     <div id="login-form">
-      <div id="db-status">
-        <div class="db-dot" id="db-dot"></div>
-        <span id="db-status-text">Connexion aux archives...</span>
-      </div>
+      <div id="db-status"><div class="db-dot" id="db-dot"></div><span id="db-status-text">Connexion aux archives...</span></div>
       <label>Identifiant</label>
       <input type="text" id="login-user" placeholder="Nom du shinobi..." />
       <label>Mot de passe</label>
@@ -183,7 +183,6 @@
       <button class="btn btn-primary" onclick="doLogin()">Accéder aux Archives</button>
       <div class="toggle-link">Pas encore enregistré ? <a onclick="showRegister()">Créer un compte</a></div>
     </div>
-
     <div id="register-form" style="display:none;">
       <label>Identifiant</label><input type="text" id="reg-user" placeholder="Nom du shinobi..." />
       <label>Mot de passe</label><input type="password" id="reg-pass" placeholder="••••••••" />
@@ -214,7 +213,6 @@
     </div>
   </nav>
 
-  <!-- NINJAS -->
   <div id="page-ninjas" class="page active">
     <div class="parchment">
       <div class="parchment-title"><span class="kana">忍者</span> Registre des Ninjas</div>
@@ -222,25 +220,14 @@
         <div class="form-grid">
           <div><label>Prénom</label><input type="text" id="n-prenom" placeholder="Ex: Naruto" /></div>
           <div><label>Nom</label><input type="text" id="n-nom" placeholder="Ex: Uzumaki" /></div>
-          <div>
-            <label>Grade</label>
-            <select id="n-grade">
-              <option value="">— Sélectionner un grade —</option>
-              <option>Genin</option><option>Genin Confirmée</option><option>Chunin</option>
-              <option>Konin</option><option>Tokubetsu Jonin</option><option>Jonin</option>
-              <option>Commandant Jonin</option><option>Kage</option>
-            </select>
-          </div>
+          <div><label>Grade</label><select id="n-grade"><option value="">— Sélectionner un grade —</option><option>Genin</option><option>Genin Confirmée</option><option>Chunin</option><option>Konin</option><option>Tokubetsu Jonin</option><option>Jonin</option><option>Commandant Jonin</option><option>Kage</option></select></div>
           <div><label>Village</label><select id="n-village"><option value="Konoha">Konoha</option><option value="Suna">Suna</option></select></div>
           <div class="form-full">
             <label>Photo <span style="font-weight:400;font-style:italic;font-size:0.75rem;">(optionnel)</span></label>
             <div class="photo-zone" onclick="document.getElementById('n-photo-input').click()">
               <input type="file" id="n-photo-input" accept="image/*" onchange="previewPhoto(event)" />
               <img id="n-photo-preview" class="photo-preview-img" alt="Aperçu" />
-              <div id="n-photo-placeholder">
-                <div style="font-size:1.5rem;color:var(--ink-light);margin-bottom:4px;">⊕</div>
-                <div class="photo-hint">Cliquez pour ajouter une photo du ninja</div>
-              </div>
+              <div id="n-photo-placeholder"><div style="font-size:1.5rem;color:var(--ink-light);margin-bottom:4px;">⊕</div><div class="photo-hint">Cliquez pour ajouter une photo du ninja</div></div>
             </div>
           </div>
         </div>
@@ -250,65 +237,32 @@
         </div>
         <div class="sep"></div>
       </div>
-      <div class="search-wrap">
-        <span class="search-icon">🔍</span>
-        <input type="text" id="ninja-search" placeholder="Rechercher par nom, grade ou village..." oninput="refreshNinjas()" />
-      </div>
-      <div class="scroll-table">
-        <table>
-          <thead><tr><th>Photo</th><th>Prénom</th><th>Nom</th><th>Grade</th><th>Village</th><th>Fautes</th><th>Profil</th><th></th></tr></thead>
-          <tbody id="ninja-tbody"></tbody>
-        </table>
-      </div>
+      <div class="search-wrap"><span class="search-icon">🔍</span><input type="text" id="ninja-search" placeholder="Rechercher par nom, grade ou village..." oninput="refreshNinjas()" /></div>
+      <div class="scroll-table"><table><thead><tr><th>Photo</th><th>Prénom</th><th>Nom</th><th>Grade</th><th>Village</th><th>Fautes</th><th>Profil</th><th></th></tr></thead><tbody id="ninja-tbody"></tbody></table></div>
       <div id="ninja-empty" class="empty-state" style="display:none;">Aucun ninja enregistré dans les archives.</div>
       <div id="ninja-noresult" style="display:none;text-align:center;padding:2rem;color:var(--ink-light);font-style:italic;">Aucun ninja ne correspond à cette recherche.</div>
     </div>
   </div>
 
-  <!-- FAUTES -->
   <div id="page-fautes" class="page">
     <div class="parchment">
       <div class="parchment-title"><span class="kana">違反</span> Registre des Fautes</div>
       <div id="faute-add-section">
         <div class="form-grid">
-          <div>
-            <label>Type de faute</label>
-            <div class="check-group">
-              <label class="check-item"><input type="radio" name="faute-type" value="Brisé de traité" checked /><span class="check-label">Brisé de traité</span></label>
-              <label class="check-item"><input type="radio" name="faute-type" value="Crime de guerre" /><span class="check-label">Crime de guerre</span></label>
-            </div>
-          </div>
-          <div>
-            <label>Village concerné</label>
-            <div class="check-group">
-              <label class="check-item"><input type="radio" name="faute-village" value="Konoha" checked /><span class="check-label">Konoha</span></label>
-              <label class="check-item"><input type="radio" name="faute-village" value="Suna" /><span class="check-label">Suna</span></label>
-            </div>
-          </div>
+          <div><label>Type de faute</label><div class="check-group"><label class="check-item"><input type="radio" name="faute-type" value="Brisé de traité" checked /><span class="check-label">Brisé de traité</span></label><label class="check-item"><input type="radio" name="faute-type" value="Crime de guerre" /><span class="check-label">Crime de guerre</span></label></div></div>
+          <div><label>Village concerné</label><div class="check-group"><label class="check-item"><input type="radio" name="faute-village" value="Konoha" checked /><span class="check-label">Konoha</span></label><label class="check-item"><input type="radio" name="faute-village" value="Suna" /><span class="check-label">Suna</span></label></div></div>
           <div><label>Ninja responsable</label><select id="f-ninja"><option value="">— Sélectionner un ninja —</option></select></div>
-          <div>
-            <label>Amende / Réparation payée ?</label>
-            <div class="check-group">
-              <label class="check-item"><input type="radio" name="faute-paye" value="non" checked /><span class="check-label" style="color:var(--red-seal);">Non payée</span></label>
-              <label class="check-item"><input type="radio" name="faute-paye" value="oui" /><span class="check-label" style="color:var(--konoha-green);">Payée / Acquittée</span></label>
-            </div>
-          </div>
+          <div><label>Amende / Réparation payée ?</label><div class="check-group"><label class="check-item"><input type="radio" name="faute-paye" value="non" checked /><span class="check-label" style="color:var(--red-seal);">Non payée</span></label><label class="check-item"><input type="radio" name="faute-paye" value="oui" /><span class="check-label" style="color:var(--konoha-green);">Payée / Acquittée</span></label></div></div>
           <div class="form-full"><label>Détails de l'incident</label><textarea id="f-details" placeholder="Décrivez les circonstances, preuves et témoignages..."></textarea></div>
         </div>
         <div class="flex-end"><button class="btn btn-danger" onclick="addFaute()">⚠ Enregistrer la Faute</button></div>
         <div class="sep"></div>
       </div>
-      <div class="scroll-table">
-        <table>
-          <thead><tr><th>Date</th><th>Type</th><th>Ninja</th><th>Village</th><th>Payée</th><th>Ajoutée par</th><th>Aperçu</th><th></th></tr></thead>
-          <tbody id="faute-tbody"></tbody>
-        </table>
-      </div>
+      <div class="scroll-table"><table><thead><tr><th>Date</th><th>Type</th><th>Ninja</th><th>Village</th><th>Payée</th><th>Ajoutée par</th><th>Aperçu</th><th></th></tr></thead><tbody id="faute-tbody"></tbody></table></div>
       <div id="faute-empty" class="empty-state">Aucune faute enregistrée. La paix règne.</div>
     </div>
   </div>
 
-  <!-- ALERTES -->
   <div id="page-alertes" class="page">
     <div class="parchment">
       <div class="parchment-title"><span class="kana">警告</span> Alertes — Ninjas Récidivistes<span style="font-size:0.8rem;font-weight:400;color:var(--red-seal);font-style:italic;margin-left:auto;">≥ 3 fautes depuis dernier jugement</span></div>
@@ -317,7 +271,6 @@
     </div>
   </div>
 
-  <!-- JUGEMENTS -->
   <div id="page-jugements" class="page">
     <div class="parchment">
       <div class="parchment-title"><span class="kana">裁判</span> Chambre des Jugements</div>
@@ -326,57 +279,24 @@
     </div>
   </div>
 
-  <!-- TRESORERIE -->
   <div id="page-tresorerie" class="page">
     <div class="parchment">
       <div class="parchment-title"><span class="kana">財務</span> Trésorerie Diplomatique</div>
-      <div class="treasury-balance">
-        <div class="treasury-label">Solde actuel</div>
-        <div class="treasury-amount" id="balance-display">0 Ryō</div>
-      </div>
-      <div id="treasury-btns">
-        <div class="flex-row" style="margin-bottom:1.5rem;">
-          <button class="btn btn-success" onclick="openTxModal('add')">+ Ajouter des fonds</button>
-          <button class="btn btn-danger" onclick="openTxModal('remove')">− Retirer des fonds</button>
-        </div>
-        <div class="sep"></div>
-      </div>
+      <div class="treasury-balance"><div class="treasury-label">Solde actuel</div><div class="treasury-amount" id="balance-display">0 Ryō</div></div>
+      <div id="treasury-btns"><div class="flex-row" style="margin-bottom:1.5rem;"><button class="btn btn-success" onclick="openTxModal('add')">+ Ajouter des fonds</button><button class="btn btn-danger" onclick="openTxModal('remove')">− Retirer des fonds</button></div><div class="sep"></div></div>
       <div style="font-family:'Cinzel',serif;font-size:0.78rem;color:var(--ink-fade);letter-spacing:0.1em;margin-bottom:1rem;">HISTORIQUE DES TRANSACTIONS</div>
-      <div id="tx-list"></div>
-      <div id="tx-empty" class="empty-state">Aucune transaction enregistrée.</div>
+      <div id="tx-list"></div><div id="tx-empty" class="empty-state">Aucune transaction enregistrée.</div>
     </div>
   </div>
 
-  <!-- DETTES -->
   <div id="page-dettes" class="page">
     <div class="parchment">
       <div class="parchment-title"><span class="kana">負債</span> Registre des Dettes</div>
-      <div class="dette-alert-banner" id="dette-alert-banner">
-        <div style="font-family:'Cinzel',serif;font-size:0.85rem;color:var(--red-seal);letter-spacing:0.08em;margin-bottom:0.5rem;">⚠ MAJORATION IMMINENTE</div>
-        <div id="dette-alert-content" style="font-size:0.85rem;color:var(--ink-fade);font-style:italic;"></div>
-      </div>
+      <div class="dette-alert-banner" id="dette-alert-banner"><div style="font-family:'Cinzel',serif;font-size:0.85rem;color:var(--red-seal);letter-spacing:0.08em;margin-bottom:0.5rem;">⚠ MAJORATION IMMINENTE</div><div id="dette-alert-content" style="font-size:0.85rem;color:var(--ink-fade);font-style:italic;"></div></div>
       <div id="dette-add-section">
         <div class="form-grid">
-          <div>
-            <label>Débiteur</label>
-            <div class="check-group">
-              <label class="check-item"><input type="radio" name="dette-debitor" value="Konoha" checked onchange="toggleDetteNinja()" /><span class="check-label">Konoha</span></label>
-              <label class="check-item"><input type="radio" name="dette-debitor" value="Suna" onchange="toggleDetteNinja()" /><span class="check-label">Suna</span></label>
-              <label class="check-item"><input type="radio" name="dette-debitor" value="ninja" onchange="toggleDetteNinja()" /><span class="check-label">Ninja spécifique</span></label>
-            </div>
-            <div id="dette-ninja-select" style="display:none;">
-              <label>Ninja concerné</label>
-              <select id="d-ninja"><option value="">— Sélectionner un ninja —</option></select>
-            </div>
-          </div>
-          <div>
-            <label>Créancier (qui doit être remboursé)</label>
-            <div class="check-group">
-              <label class="check-item"><input type="radio" name="dette-creancier" value="Konoha" checked /><span class="check-label">Konoha</span></label>
-              <label class="check-item"><input type="radio" name="dette-creancier" value="Suna" /><span class="check-label">Suna</span></label>
-              <label class="check-item"><input type="radio" name="dette-creancier" value="Autre" /><span class="check-label">Autre</span></label>
-            </div>
-          </div>
+          <div><label>Débiteur</label><div class="check-group"><label class="check-item"><input type="radio" name="dette-debitor" value="Konoha" checked onchange="toggleDetteNinja()" /><span class="check-label">Konoha</span></label><label class="check-item"><input type="radio" name="dette-debitor" value="Suna" onchange="toggleDetteNinja()" /><span class="check-label">Suna</span></label><label class="check-item"><input type="radio" name="dette-debitor" value="ninja" onchange="toggleDetteNinja()" /><span class="check-label">Ninja spécifique</span></label></div><div id="dette-ninja-select" style="display:none;"><label>Ninja concerné</label><select id="d-ninja"><option value="">— Sélectionner un ninja —</option></select></div></div>
+          <div><label>Créancier (qui doit être remboursé)</label><div class="check-group"><label class="check-item"><input type="radio" name="dette-creancier" value="Konoha" checked /><span class="check-label">Konoha</span></label><label class="check-item"><input type="radio" name="dette-creancier" value="Suna" /><span class="check-label">Suna</span></label><label class="check-item"><input type="radio" name="dette-creancier" value="Autre" /><span class="check-label">Autre</span></label></div></div>
           <div><label>Montant initial (Ryō)</label><input type="number" id="d-montant" placeholder="Ex: 10000" min="1" /></div>
           <div><label>Date de création</label><input type="date" id="d-date" /></div>
           <div class="form-full"><label>Motif de la dette</label><textarea id="d-motif" placeholder="Raison de l'emprunt, contexte diplomatique..."></textarea></div>
@@ -384,12 +304,10 @@
         <div class="flex-end"><button class="btn btn-primary" onclick="addDette()">📜 Enregistrer la Dette</button></div>
         <div class="sep"></div>
       </div>
-      <div id="dette-list"></div>
-      <div id="dette-empty" class="empty-state">Aucune dette enregistrée. Les caisses sont en ordre.</div>
+      <div id="dette-list"></div><div id="dette-empty" class="empty-state">Aucune dette enregistrée. Les caisses sont en ordre.</div>
     </div>
   </div>
 
-  <!-- COMPTES -->
   <div id="page-comptes" class="page">
     <div class="parchment">
       <div class="parchment-title"><span class="kana">管理</span> Gestion des Comptes</div>
@@ -407,25 +325,18 @@
     <div id="dossier-actions" class="flex-end mt-1" style="border-top:1px solid var(--parch-edge);padding-top:1rem;margin-top:1rem;"></div>
   </div>
 </div>
-
 <div class="modal-overlay" id="modal-jugement">
   <div class="modal-box">
     <button class="modal-close" onclick="closeModal('modal-jugement')">✕</button>
     <div class="modal-title" id="jugement-modal-title">Enregistrer le Jugement</div>
     <div id="jugement-ninja-info" style="font-family:'Cinzel',serif;color:var(--ink-fade);font-size:0.85rem;margin-bottom:1.2rem;"></div>
-    <label>Date du jugement</label>
-    <input type="text" id="j-date" placeholder="Ex: 26/04/2026" />
-    <label>Peine / Résultat</label>
-    <textarea id="j-peine" placeholder="Ex: Bannissement, emprisonnement, amende, acquittement..." style="min-height:100px;"></textarea>
+    <label>Date du jugement</label><input type="text" id="j-date" placeholder="Ex: 26/04/2026" />
+    <label>Peine / Résultat</label><textarea id="j-peine" placeholder="Ex: Bannissement, emprisonnement, amende, acquittement..." style="min-height:100px;"></textarea>
     <label>Notes supplémentaires <span style="font-weight:400;font-style:italic;font-size:0.75rem;">(optionnel)</span></label>
     <textarea id="j-notes" placeholder="Circonstances atténuantes, conditions..."></textarea>
-    <div class="flex-end mt-1">
-      <button class="btn btn-ghost" onclick="closeModal('modal-jugement')">Annuler</button>
-      <button class="btn btn-primary" onclick="confirmJugement()">Sceller le Jugement</button>
-    </div>
+    <div class="flex-end mt-1"><button class="btn btn-ghost" onclick="closeModal('modal-jugement')">Annuler</button><button class="btn btn-primary" onclick="confirmJugement()">Sceller le Jugement</button></div>
   </div>
 </div>
-
 <div class="modal-overlay" id="modal-profil">
   <div class="modal-box" style="max-width:620px;">
     <button class="modal-close" onclick="closeModal('modal-profil')">✕</button>
@@ -433,76 +344,53 @@
     <div id="profil-content"></div>
   </div>
 </div>
-
 <div class="modal-overlay" id="modal-tx">
   <div class="modal-box">
     <button class="modal-close" onclick="closeModal('modal-tx')">✕</button>
     <div class="modal-title" id="tx-modal-title">Transaction</div>
     <label>Montant (Ryō)</label><input type="number" id="tx-amount" placeholder="Ex: 5000" min="1" />
     <label>Détails / Motif</label><textarea id="tx-detail" placeholder="Motif de la transaction..."></textarea>
-    <div class="flex-end mt-1">
-      <button class="btn btn-ghost" onclick="closeModal('modal-tx')">Annuler</button>
-      <button class="btn btn-primary" onclick="confirmTx()">Confirmer</button>
-    </div>
+    <div class="flex-end mt-1"><button class="btn btn-ghost" onclick="closeModal('modal-tx')">Annuler</button><button class="btn btn-primary" onclick="confirmTx()">Confirmer</button></div>
   </div>
 </div>
-
 <div class="modal-overlay" id="modal-role">
   <div class="modal-box">
     <button class="modal-close" onclick="closeModal('modal-role')">✕</button>
     <div class="modal-title">Attribuer un Grade Diplomatique</div>
     <div id="role-username" style="font-family:'Cinzel',serif;color:var(--ink-fade);margin-bottom:1rem;font-size:0.85rem;"></div>
     <label>Nouveau grade</label>
-    <select id="role-select">
-      <option value="gerant">Gérant Diplomatique</option>
-      <option value="diplomate">Diplomate</option>
-      <option value="apprenti">Apprenti Diplomate</option>
-      <option value="observateur">Observateur</option>
-    </select>
-    <div class="flex-end mt-1">
-      <button class="btn btn-ghost" onclick="closeModal('modal-role')">Annuler</button>
-      <button class="btn btn-primary" onclick="confirmRole()">Valider</button>
-    </div>
+    <select id="role-select"><option value="gerant">Gérant Diplomatique</option><option value="diplomate">Diplomate</option><option value="apprenti">Apprenti Diplomate</option><option value="observateur">Observateur</option></select>
+    <div class="flex-end mt-1"><button class="btn btn-ghost" onclick="closeModal('modal-role')">Annuler</button><button class="btn btn-primary" onclick="confirmRole()">Valider</button></div>
   </div>
 </div>
-
-<!-- Modal édition jugement -->
 <div class="modal-overlay" id="modal-edit-jugement">
   <div class="modal-box">
     <button class="modal-close" onclick="closeModal('modal-edit-jugement')">✕</button>
     <div class="modal-title" id="edit-jugement-title">Modifier le Jugement</div>
     <div id="edit-jugement-ninja-info" style="font-family:'Cinzel',serif;color:var(--ink-fade);font-size:0.85rem;margin-bottom:1.2rem;"></div>
-    <label>Statut</label>
-    <select id="ej-statut">
-      <option value="en_attente">En attente</option>
-      <option value="clos">Clos</option>
-    </select>
-    <label>Date du jugement</label>
-    <input type="text" id="ej-date" placeholder="Ex: 26/04/2026" />
-    <label>Peine / Résultat</label>
-    <textarea id="ej-peine" style="min-height:100px;" placeholder="Ex: Bannissement, emprisonnement, amende, acquittement..."></textarea>
+    <label>Statut</label><select id="ej-statut"><option value="en_attente">En attente</option><option value="clos">Clos</option></select>
+    <label>Date du jugement</label><input type="text" id="ej-date" placeholder="Ex: 26/04/2026" />
+    <label>Peine / Résultat</label><textarea id="ej-peine" style="min-height:100px;" placeholder="Ex: Bannissement, emprisonnement, amende, acquittement..."></textarea>
     <label>Notes supplémentaires <span style="font-weight:400;font-style:italic;font-size:0.75rem;">(optionnel)</span></label>
     <textarea id="ej-notes" placeholder="Circonstances atténuantes, conditions..."></textarea>
     <div style="display:flex;justify-content:space-between;align-items:center;margin-top:1rem;padding-top:1rem;border-top:1px solid var(--parch-edge);">
       <button class="btn btn-danger btn-sm" onclick="supprimerJugement()">Supprimer ce jugement</button>
-      <div class="flex-end">
-        <button class="btn btn-ghost" onclick="closeModal('modal-edit-jugement')">Annuler</button>
-        <button class="btn btn-primary" style="width:auto;" onclick="sauvegarderJugement()">Enregistrer</button>
-      </div>
+      <div class="flex-end"><button class="btn btn-ghost" onclick="closeModal('modal-edit-jugement')">Annuler</button><button class="btn btn-primary" style="width:auto;" onclick="sauvegarderJugement()">Enregistrer</button></div>
     </div>
   </div>
 </div>
 
-<!-- Modal détail faute -->
+<!-- Modal détail faute — avec toggle paiement -->
 <div class="modal-overlay" id="modal-faute-detail">
   <div class="modal-box" style="max-width:580px;">
     <button class="modal-close" onclick="closeModal('modal-faute-detail')">✕</button>
     <div class="modal-title" id="faute-detail-title">Détail de la Faute</div>
     <div id="faute-detail-content"></div>
+    <!-- Zone toggle paiement, visible uniquement si autorisé -->
+    <div id="faute-paye-toggle-zone" style="margin-top:1rem;padding-top:1rem;border-top:1px solid rgba(184,149,90,0.4);"></div>
   </div>
 </div>
 
-<!-- Modal casier utilisateur -->
 <div class="modal-overlay" id="modal-casier">
   <div class="modal-box" style="max-width:620px;">
     <button class="modal-close" onclick="closeModal('modal-casier')">✕</button>
@@ -511,15 +399,11 @@
   </div>
 </div>
 
-<!-- Confirmation dette payée -->
 <div class="confirm-overlay" id="confirm-paye">
   <div class="confirm-box">
     <div style="font-family:'Cinzel',serif;font-size:1rem;font-weight:700;color:var(--ink);margin-bottom:1rem;letter-spacing:0.1em;">Confirmer le remboursement</div>
     <div id="confirm-paye-info" style="font-size:0.88rem;color:var(--ink-fade);font-style:italic;margin-bottom:1.5rem;"></div>
-    <div class="flex-end">
-      <button class="btn btn-ghost btn-sm" onclick="closeConfirmPaye()">Annuler</button>
-      <button class="btn btn-success btn-sm" onclick="confirmerPaye()">✓ Marquer comme payée</button>
-    </div>
+    <div class="flex-end"><button class="btn btn-ghost btn-sm" onclick="closeConfirmPaye()">Annuler</button><button class="btn btn-success btn-sm" onclick="confirmerPaye()">✓ Marquer comme payée</button></div>
   </div>
 </div>
 
@@ -538,17 +422,11 @@ const firebaseConfig = {
   appId: "1:789271420105:web:ca8f888b74fcee14338118"
 };
 
-const app = initializeApp(firebaseConfig);
-const firebaseDb = getFirestore(app);
+const fbApp = initializeApp(firebaseConfig);
+const firebaseDb = getFirestore(fbApp);
 
-const ROLES = {
-  admin:'Administrateur', gerant:'Gérant Diplomatique',
-  diplomate:'Diplomate', apprenti:'Apprenti Diplomate', observateur:'Observateur'
-};
-const DEFAULT_DB = {
-  users:[{id:'u0',username:'admin',password:'admin123',role:'admin',approved:true}],
-  ninjas:[],fautes:[],jugements:[],transactions:[],balance:0,dettes:[],actionLog:[]
-};
+const ROLES = { admin:'Administrateur', gerant:'Gérant Diplomatique', diplomate:'Diplomate', apprenti:'Apprenti Diplomate', observateur:'Observateur' };
+const DEFAULT_DB = { users:[{id:'u0',username:'admin',password:'admin123',role:'admin',approved:true}], ninjas:[], fautes:[], jugements:[], transactions:[], balance:0, dettes:[], actionLog:[] };
 
 let db = JSON.parse(JSON.stringify(DEFAULT_DB));
 let currentUser = null;
@@ -559,124 +437,103 @@ let saveTimeout = null;
 let jugementTargetNinjaId = null;
 let dettePayeId = null;
 let editJugementId = null;
+let currentFauteDetailId = null; // ← pour le toggle paiement
 
 const LS_KEY = 'konoha_db_cache_v2';
-function cacheRead() { try { const r=localStorage.getItem(LS_KEY); if(r) return JSON.parse(r); } catch(e){} return null; }
-function cacheWrite(d) { try { localStorage.setItem(LS_KEY, JSON.stringify(d)); } catch(e){} }
+function cacheRead(){try{const r=localStorage.getItem(LS_KEY);if(r)return JSON.parse(r);}catch(e){}return null;}
+function cacheWrite(d){try{localStorage.setItem(LS_KEY,JSON.stringify(d));}catch(e){}}
 
-async function loadDB() {
-  const cached = cacheRead();
-  if (cached && cached.users) { db = cached; if (!db.dettes) db.dettes=[]; if (!db.actionLog) db.actionLog=[]; setDbStatus('cache','Archives locales chargées'); }
+async function loadDB(){
+  const cached=cacheRead();
+  if(cached&&cached.users){db=cached;if(!db.dettes)db.dettes=[];if(!db.actionLog)db.actionLog=[];setDbStatus('cache','Archives locales chargées');}
   else setDbStatus('loading','Connexion aux archives...');
   fetchRemoteDB();
 }
 
-async function fetchRemoteDB() {
-  try {
-    const ref = doc(firebaseDb, "app", "konoha");
-    const snap = await getDoc(ref);
-    if (snap.exists()) {
-      db = snap.data();
-      if (!Array.isArray(db.jugements)) db.jugements=[];
-      if (!Array.isArray(db.dettes)) db.dettes=[];
-      if (!Array.isArray(db.actionLog)) db.actionLog=[];
-      cacheWrite(db);
-      setDbStatus('ok','Firebase connecté ✓');
-      if (currentUser) refreshAll();
-    } else {
-      db = JSON.parse(JSON.stringify(DEFAULT_DB));
-      await saveDB(true);
-      setDbStatus('ok','Base créée ✓');
+async function fetchRemoteDB(){
+  try{
+    const ref=doc(firebaseDb,"app","konoha");
+    const snap=await getDoc(ref);
+    if(snap.exists()){
+      db=snap.data();
+      if(!Array.isArray(db.jugements))db.jugements=[];
+      if(!Array.isArray(db.dettes))db.dettes=[];
+      if(!Array.isArray(db.actionLog))db.actionLog=[];
+      cacheWrite(db);setDbStatus('ok','Firebase connecté ✓');
+      if(currentUser)refreshAll();
+    }else{
+      db=JSON.parse(JSON.stringify(DEFAULT_DB));
+      await saveDB(true);setDbStatus('ok','Base créée ✓');
     }
-  } catch(e) {
-    console.error(e);
-    setDbStatus('err','Erreur Firebase');
+  }catch(e){console.error(e);setDbStatus('err','Erreur Firebase');}
+}
+
+async function saveDB(silent=false){
+  try{
+    await setDoc(doc(firebaseDb,"app","konoha"),db);
+    cacheWrite(db);
+    if(!silent)showSaveIndicator('✓ Sauvegardé',false);
+  }catch(e){
+    console.error(e);cacheWrite(db);
+    if(!silent)showSaveIndicator('⚠ Local uniquement',true);
   }
 }
+function scheduleSave(){clearTimeout(saveTimeout);saveTimeout=setTimeout(()=>saveDB(),800);}
 
-async function saveDB(silent=false) {
-  try {
-    await setDoc(doc(firebaseDb, "app", "konoha"), db);
-    cacheWrite(db);
-    if (!silent) showSaveIndicator('✓ Sauvegardé', false);
-  } catch(e) {
-    console.error(e);
-    cacheWrite(db);
-    if (!silent) showSaveIndicator('⚠ Local uniquement', true);
-  }
+function logAction(type,description,details={}){
+  if(!db.actionLog)db.actionLog=[];
+  db.actionLog.unshift({id:'log'+Date.now()+Math.random(),type,description,details,author:currentUser?.username||'?',authorId:currentUser?.id||'?',date:new Date().toLocaleDateString('fr-FR'),timestamp:Date.now()});
+  if(db.actionLog.length>500)db.actionLog=db.actionLog.slice(0,500);
 }
 
-function scheduleSave() { clearTimeout(saveTimeout); saveTimeout = setTimeout(() => saveDB(), 800); }
-
-// Log an action to the casier
-function logAction(type, description, details={}) {
-  if (!db.actionLog) db.actionLog=[];
-  db.actionLog.unshift({
-    id:'log'+Date.now()+Math.random(),
-    type, description, details,
-    author: currentUser?.username||'?',
-    authorId: currentUser?.id||'?',
-    date: new Date().toLocaleDateString('fr-FR'),
-    timestamp: Date.now()
-  });
-  // keep last 500 entries
-  if (db.actionLog.length > 500) db.actionLog = db.actionLog.slice(0,500);
+function setDbStatus(state,text){
+  const dot=document.getElementById('db-dot'),span=document.getElementById('db-status-text');
+  if(!dot||!span)return;
+  dot.className='db-dot'+(state==='ok'?' ok':state==='err'?' err':'');
+  span.textContent=text;
+}
+function showSaveIndicator(msg,isError){
+  const el=document.getElementById('save-indicator');
+  el.textContent=msg;el.className='save-indicator visible'+(isError?' error':'');
+  setTimeout(()=>{el.className='save-indicator';},2500);
 }
 
-function setDbStatus(state, text) {
-  const dot = document.getElementById('db-dot');
-  const span = document.getElementById('db-status-text');
-  if (!dot||!span) return;
-  dot.className = 'db-dot'+(state==='ok'?' ok':state==='err'?' err':'');
-  span.textContent = text;
-}
-function showSaveIndicator(msg, isError) {
-  const el = document.getElementById('save-indicator');
-  el.textContent = msg;
-  el.className = 'save-indicator visible'+(isError?' error':'');
-  setTimeout(() => { el.className = 'save-indicator'; }, 2500);
-}
+function showLogin(){document.getElementById('login-form').style.display='block';document.getElementById('register-form').style.display='none';}
+function showRegister(){document.getElementById('login-form').style.display='none';document.getElementById('register-form').style.display='block';}
 
-// AUTH
-function showLogin() { document.getElementById('login-form').style.display='block'; document.getElementById('register-form').style.display='none'; }
-function showRegister() { document.getElementById('login-form').style.display='none'; document.getElementById('register-form').style.display='block'; }
-
-function doLogin() {
-  const u = document.getElementById('login-user').value.trim();
-  const p = document.getElementById('login-pass').value;
-  const err = document.getElementById('login-error');
-  const user = db.users.find(x => x.username===u && x.password===p);
-  if (!user) { showErr(err,'Identifiant ou mot de passe incorrect.'); return; }
-  if (!user.approved) { showErr(err,'Votre compte est en attente de validation.'); return; }
-  err.style.display='none';
-  currentUser = user;
+function doLogin(){
+  const u=document.getElementById('login-user').value.trim();
+  const p=document.getElementById('login-pass').value;
+  const err=document.getElementById('login-error');
+  const user=db.users.find(x=>x.username===u&&x.password===p);
+  if(!user){showErr(err,'Identifiant ou mot de passe incorrect.');return;}
+  if(!user.approved){showErr(err,'Votre compte est en attente de validation.');return;}
+  err.style.display='none';currentUser=user;
   document.getElementById('login-screen').style.display='none';
   document.getElementById('app').style.cssText='display:flex;flex-direction:column;min-height:100vh;';
   document.getElementById('user-display').textContent=user.username;
   document.getElementById('role-display').textContent=ROLES[user.role]||user.role;
   document.getElementById('d-date').value=new Date().toISOString().split('T')[0];
-  switchPage('ninjas');
-  refreshAll();
+  switchPage('ninjas');refreshAll();
 }
 
-function doRegister() {
-  const u = document.getElementById('reg-user').value.trim();
-  const p = document.getElementById('reg-pass').value;
-  const p2 = document.getElementById('reg-pass2').value;
-  const err = document.getElementById('reg-error');
-  if (!u) { showErr(err,'Veuillez saisir un identifiant.'); return; }
-  if (p.length < 4) { showErr(err,'Mot de passe trop court (min 4 car.).'); return; }
-  if (p !== p2) { showErr(err,'Les mots de passe ne correspondent pas.'); return; }
-  if (db.users.find(x => x.username===u)) { showErr(err,'Identifiant déjà utilisé.'); return; }
+function doRegister(){
+  const u=document.getElementById('reg-user').value.trim();
+  const p=document.getElementById('reg-pass').value;
+  const p2=document.getElementById('reg-pass2').value;
+  const err=document.getElementById('reg-error');
+  if(!u){showErr(err,'Veuillez saisir un identifiant.');return;}
+  if(p.length<4){showErr(err,'Mot de passe trop court (min 4 car.).');return;}
+  if(p!==p2){showErr(err,'Les mots de passe ne correspondent pas.');return;}
+  if(db.users.find(x=>x.username===u)){showErr(err,'Identifiant déjà utilisé.');return;}
   db.users.push({id:'u'+Date.now(),username:u,password:p,role:'observateur',approved:false});
-  scheduleSave();
-  showLogin();
-  const lerr = document.getElementById('login-error');
+  scheduleSave();showLogin();
+  const lerr=document.getElementById('login-error');
   lerr.style.cssText='display:block;color:var(--konoha-green);font-style:italic;';
   lerr.textContent="Compte créé ! En attente de validation par l'Administrateur ou un Gérant.";
 }
 
-function doLogout() {
+function doLogout(){
   currentUser=null;
   document.getElementById('app').style.display='none';
   document.getElementById('login-screen').style.display='flex';
@@ -686,106 +543,86 @@ function doLogout() {
   fetchRemoteDB();
 }
 
-function showErr(el, msg) { el.style.cssText='display:block;color:var(--red-seal);font-style:italic;'; el.textContent=msg; }
+function showErr(el,msg){el.style.cssText='display:block;color:var(--red-seal);font-style:italic;';el.textContent=msg;}
 
-// PERMISSIONS
-function canAddNinja()       { return ['admin','gerant','diplomate','apprenti'].includes(currentUser?.role); }
-function canDeleteNinja()    { return ['admin','gerant'].includes(currentUser?.role); }
-function canAddFaute()       { return ['admin','gerant','diplomate','apprenti'].includes(currentUser?.role); }
-function canDeleteFaute()    { return ['admin','gerant'].includes(currentUser?.role); }
-function canManageTreasury() { return ['admin','gerant','diplomate'].includes(currentUser?.role); }
-function canManageUsers()    { return ['admin','gerant'].includes(currentUser?.role); }
-function canManageDettes()   { return ['admin','gerant','diplomate'].includes(currentUser?.role); }
-function canJugement()       { return ['admin','gerant'].includes(currentUser?.role); }
+function canAddNinja(){return['admin','gerant','diplomate','apprenti'].includes(currentUser?.role);}
+function canDeleteNinja(){return['admin','gerant'].includes(currentUser?.role);}
+function canAddFaute(){return['admin','gerant','diplomate','apprenti'].includes(currentUser?.role);}
+function canDeleteFaute(){return['admin','gerant'].includes(currentUser?.role);}
+function canEditFautePaye(){return['admin','gerant','diplomate'].includes(currentUser?.role);}
+function canManageTreasury(){return['admin','gerant','diplomate'].includes(currentUser?.role);}
+function canManageUsers(){return['admin','gerant'].includes(currentUser?.role);}
+function canManageDettes(){return['admin','gerant','diplomate'].includes(currentUser?.role);}
+function canJugement(){return['admin','gerant'].includes(currentUser?.role);}
 
-// NAVIGATION
-function switchPage(page) {
-  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+function switchPage(page){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
   document.getElementById('page-'+page).classList.add('active');
   document.getElementById('nav-'+page).classList.add('active');
-  if (page==='ninjas')     refreshNinjas();
-  if (page==='fautes')     { refreshNinjaSelect(); refreshFautes(); }
-  if (page==='alertes')    { refreshAlertes(); clearBadge('alert-badge'); }
-  if (page==='jugements')  { refreshJugements(); clearBadge('jugement-badge'); }
-  if (page==='tresorerie') refreshTreasury();
-  if (page==='dettes')     { refreshDettes(); clearBadge('dette-badge'); }
-  if (page==='comptes')    refreshComptes();
+  if(page==='ninjas')refreshNinjas();
+  if(page==='fautes'){refreshNinjaSelect();refreshFautes();}
+  if(page==='alertes'){refreshAlertes();clearBadge('alert-badge');}
+  if(page==='jugements'){refreshJugements();clearBadge('jugement-badge');}
+  if(page==='tresorerie')refreshTreasury();
+  if(page==='dettes'){refreshDettes();clearBadge('dette-badge');}
+  if(page==='comptes')refreshComptes();
 }
 
-function refreshAll() {
-  refreshNinjas(); refreshNinjaSelect(); refreshFautes();
-  refreshAlertes(); refreshJugements(); refreshTreasury();
-  refreshDettes(); refreshComptes(); updateBadge();
+function refreshAll(){
+  refreshNinjas();refreshNinjaSelect();refreshFautes();
+  refreshAlertes();refreshJugements();refreshTreasury();
+  refreshDettes();refreshComptes();updateBadge();
 }
 
-// PHOTO
-function previewPhoto(e) {
-  const file=e.target.files[0]; if(!file) return;
+function previewPhoto(e){
+  const file=e.target.files[0];if(!file)return;
   const reader=new FileReader();
-  reader.onload=ev=>{
-    pendingPhoto=ev.target.result;
-    const prev=document.getElementById('n-photo-preview');
-    prev.src=pendingPhoto; prev.style.display='block';
-    document.getElementById('n-photo-placeholder').style.display='none';
-  };
+  reader.onload=ev=>{pendingPhoto=ev.target.result;const prev=document.getElementById('n-photo-preview');prev.src=pendingPhoto;prev.style.display='block';document.getElementById('n-photo-placeholder').style.display='none';};
   reader.readAsDataURL(file);
 }
-function clearPhoto() {
-  pendingPhoto=null;
-  document.getElementById('n-photo-preview').style.display='none';
-  document.getElementById('n-photo-input').value='';
-  document.getElementById('n-photo-placeholder').style.display='block';
-}
+function clearPhoto(){pendingPhoto=null;document.getElementById('n-photo-preview').style.display='none';document.getElementById('n-photo-input').value='';document.getElementById('n-photo-placeholder').style.display='block';}
 
-// NINJAS
-function gradeClass(g) { return 'grade-'+g.replace(/\s/g,'_'); }
+function gradeClass(g){return'grade-'+g.replace(/\s/g,'_');}
 
-function addNinja() {
-  if (!canAddNinja()) return;
+function addNinja(){
+  if(!canAddNinja())return;
   const prenom=document.getElementById('n-prenom').value.trim();
   const nom=document.getElementById('n-nom').value.trim();
   const grade=document.getElementById('n-grade').value;
   const village=document.getElementById('n-village').value;
-  if (!prenom||!nom||!grade) { alert('Remplissez les champs obligatoires.'); return; }
+  if(!prenom||!nom||!grade){alert('Remplissez les champs obligatoires.');return;}
   const ninja={id:'n'+Date.now(),prenom,nom,grade,village,photo:pendingPhoto};
   db.ninjas.push(ninja);
   logAction('ninja_add',`Ninja ajouté : ${prenom} ${nom}`,{ninjaId:ninja.id,grade,village});
-  document.getElementById('n-prenom').value='';
-  document.getElementById('n-nom').value='';
-  document.getElementById('n-grade').value='';
-  clearPhoto(); refreshNinjas(); refreshNinjaSelect(); scheduleSave();
+  document.getElementById('n-prenom').value='';document.getElementById('n-nom').value='';document.getElementById('n-grade').value='';
+  clearPhoto();refreshNinjas();refreshNinjaSelect();scheduleSave();
 }
 
-function deleteNinja(id) {
-  if (!canDeleteNinja()) return;
-  if (!confirm('Supprimer définitivement ce ninja des archives ?')) return;
+function deleteNinja(id){
+  if(!canDeleteNinja())return;
+  if(!confirm('Supprimer définitivement ce ninja des archives ?'))return;
   const n=db.ninjas.find(x=>x.id===id);
   logAction('ninja_delete',`Ninja retiré : ${n?n.prenom+' '+n.nom:'inconnu'}`,{ninjaId:id});
   db.ninjas=db.ninjas.filter(n=>n.id!==id);
-  refreshNinjas(); refreshNinjaSelect(); refreshFautes(); refreshAlertes(); updateBadge();
-  scheduleSave();
+  refreshNinjas();refreshNinjaSelect();refreshFautes();refreshAlertes();updateBadge();scheduleSave();
 }
 
-function refreshNinjas() {
+function refreshNinjas(){
   document.getElementById('ninja-add-section').style.display=canAddNinja()?'':'none';
   const query=(document.getElementById('ninja-search')?.value||'').toLowerCase().trim();
   const tbody=document.getElementById('ninja-tbody');
   const empty=document.getElementById('ninja-empty');
   const noRes=document.getElementById('ninja-noresult');
-  if (db.ninjas.length===0) { tbody.innerHTML=''; empty.style.display='block'; noRes.style.display='none'; return; }
+  if(db.ninjas.length===0){tbody.innerHTML='';empty.style.display='block';noRes.style.display='none';return;}
   empty.style.display='none';
-  const list=query?db.ninjas.filter(n=>
-    n.prenom.toLowerCase().includes(query)||n.nom.toLowerCase().includes(query)||
-    n.grade.toLowerCase().includes(query)||n.village.toLowerCase().includes(query)):db.ninjas;
-  if (list.length===0) { tbody.innerHTML=''; noRes.style.display='block'; return; }
-  noRes.style.display='none'; tbody.innerHTML='';
+  const list=query?db.ninjas.filter(n=>n.prenom.toLowerCase().includes(query)||n.nom.toLowerCase().includes(query)||n.grade.toLowerCase().includes(query)||n.village.toLowerCase().includes(query)):db.ninjas;
+  if(list.length===0){tbody.innerHTML='';noRes.style.display='block';return;}
+  noRes.style.display='none';tbody.innerHTML='';
   list.forEach(n=>{
     const fCount=db.fautes.filter(f=>f.ninjaId===n.id).length;
     const gc=gradeClass(n.grade);
-    const avatar=n.photo
-      ?`<div class="ninja-avatar"><img src="${n.photo}" alt="${n.prenom}" /></div>`
-      :`<div class="ninja-avatar">${n.prenom[0]||'?'}</div>`;
+    const avatar=n.photo?`<div class="ninja-avatar"><img src="${n.photo}" alt="${n.prenom}" /></div>`:`<div class="ninja-avatar">${n.prenom[0]||'?'}</div>`;
     const enJugement=(db.jugements||[]).some(j=>j.ninjaId===n.id&&j.statut==='en_attente');
     const newFaultCount=countNewFaultsSinceLastJugement(n.id);
     const tr=document.createElement('tr');
@@ -799,70 +636,72 @@ function refreshNinjas() {
   });
 }
 
-function refreshNinjaSelect() {
+function refreshNinjaSelect(){
   ['f-ninja','d-ninja'].forEach(selId=>{
-    const sel=document.getElementById(selId); if(!sel) return;
-    const cur=sel.value;
-    sel.innerHTML='<option value="">— Sélectionner un ninja —</option>';
-    db.ninjas.forEach(n=>{
-      const opt=document.createElement('option');
-      opt.value=n.id; opt.textContent=`${n.prenom} ${n.nom} (${n.grade})`;
-      if(n.id===cur) opt.selected=true; sel.appendChild(opt);
-    });
+    const sel=document.getElementById(selId);if(!sel)return;
+    const cur=sel.value;sel.innerHTML='<option value="">— Sélectionner un ninja —</option>';
+    db.ninjas.forEach(n=>{const opt=document.createElement('option');opt.value=n.id;opt.textContent=`${n.prenom} ${n.nom} (${n.grade})`;if(n.id===cur)opt.selected=true;sel.appendChild(opt);});
   });
 }
 
-// ── ALERT LOGIC: count faults AFTER the last CLOSED judgment ──
-function getLastClosedJugementTimestamp(ninjaId) {
+function getLastClosedJugementTimestamp(ninjaId){
   const closed=(db.jugements||[]).filter(j=>j.ninjaId===ninjaId&&j.statut==='clos');
-  if (closed.length===0) return 0;
-  // jugements have id like 'j1777...' = timestamp-based; use max id numerically
-  const maxId=Math.max(...closed.map(j=>parseInt(j.id.replace('j',''))||0));
-  return maxId;
+  if(closed.length===0)return 0;
+  return Math.max(...closed.map(j=>parseInt(j.id.replace('j',''))||0));
 }
 
-function countNewFaultsSinceLastJugement(ninjaId) {
+function countNewFaultsSinceLastJugement(ninjaId){
   const lastJugTs=getLastClosedJugementTimestamp(ninjaId);
-  // faults have id like 'f<timestamp>'
   return db.fautes.filter(f=>{
-    if (f.ninjaId!==ninjaId) return false;
+    if(f.ninjaId!==ninjaId)return false;
     const fTs=parseInt(f.id.replace('f',''))||0;
-    return fTs > lastJugTs;
+    return fTs>lastJugTs;
   }).length;
 }
 
-// FAUTES
-function addFaute() {
-  if (!canAddFaute()) return;
+function addFaute(){
+  if(!canAddFaute())return;
   const type=document.querySelector('input[name="faute-type"]:checked')?.value;
   const village=document.querySelector('input[name="faute-village"]:checked')?.value;
   const ninjaId=document.getElementById('f-ninja').value;
   const details=document.getElementById('f-details').value.trim();
   const paye=document.querySelector('input[name="faute-paye"]:checked')?.value||'non';
-  if (!ninjaId||!details) { alert('Sélectionnez un ninja et ajoutez des détails.'); return; }
-  const faute={id:'f'+Date.now(),type,village,ninjaId,details,paye,
-    date:new Date().toLocaleDateString('fr-FR'),author:currentUser.username,authorId:currentUser.id};
+  if(!ninjaId||!details){alert('Sélectionnez un ninja et ajoutez des détails.');return;}
+  const faute={id:'f'+Date.now(),type,village,ninjaId,details,paye,date:new Date().toLocaleDateString('fr-FR'),author:currentUser.username,authorId:currentUser.id};
   db.fautes.push(faute);
   const ninja=db.ninjas.find(x=>x.id===ninjaId);
-  logAction('faute_add',`Faute enregistrée : ${type} — ${ninja?ninja.prenom+' '+ninja.nom:'?'}`,
-    {fauteId:faute.id,ninjaId,type,village,paye});
-  document.getElementById('f-details').value='';
-  document.getElementById('f-ninja').value='';
+  logAction('faute_add',`Faute enregistrée : ${type} — ${ninja?ninja.prenom+' '+ninja.nom:'?'}`,{fauteId:faute.id,ninjaId,type,village,paye});
+  document.getElementById('f-details').value='';document.getElementById('f-ninja').value='';
   document.querySelector('input[name="faute-paye"][value="non"]').checked=true;
-  refreshFautes(); refreshNinjas(); refreshAlertes(); updateBadge(); scheduleSave();
+  refreshFautes();refreshNinjas();refreshAlertes();updateBadge();scheduleSave();
 }
 
-function deleteFaute(id) {
-  if (!canDeleteFaute()) return;
-  if (!confirm('Supprimer cette faute des archives ?')) return;
+function deleteFaute(id){
+  if(!canDeleteFaute())return;
+  if(!confirm('Supprimer cette faute des archives ?'))return;
   const f=db.fautes.find(x=>x.id===id);
   logAction('faute_delete',`Faute supprimée (${f?f.type:'?'})`,{fauteId:id});
   db.fautes=db.fautes.filter(f=>f.id!==id);
-  refreshFautes(); refreshNinjas(); refreshAlertes(); updateBadge(); scheduleSave();
+  refreshFautes();refreshNinjas();refreshAlertes();updateBadge();scheduleSave();
 }
 
-function openFauteDetail(fauteId) {
-  const f=db.fautes.find(x=>x.id===fauteId); if(!f) return;
+// ─── TOGGLE PAIEMENT FAUTE ────────────────────────────────────
+function toggleFautePaye(fauteId){
+  if(!canEditFautePaye())return;
+  const f=db.fautes.find(x=>x.id===fauteId);if(!f)return;
+  const ancienEtat=f.paye;
+  f.paye=(f.paye==='oui')?'non':'oui';
+  logAction('faute_paye_toggle',`État paiement faute modifié : ${ancienEtat} → ${f.paye}`,{fauteId});
+  scheduleSave();
+  // Rafraîchir le modal en place
+  openFauteDetail(fauteId);
+  // Rafraîchir aussi la liste
+  refreshFautes();refreshNinjas();
+}
+
+function openFauteDetail(fauteId){
+  const f=db.fautes.find(x=>x.id===fauteId);if(!f)return;
+  currentFauteDetailId=fauteId;
   const ninja=db.ninjas.find(x=>x.id===f.ninjaId);
   const ninjaName=ninja?`${ninja.prenom} ${ninja.nom}`:'Ninja inconnu';
   const typeKey=f.type==='Crime de guerre'?'Crime':'Brise';
@@ -871,16 +710,12 @@ function openFauteDetail(fauteId) {
   const avatar=ninja?.photo
     ?`<img src="${ninja.photo}" style="width:52px;height:52px;border-radius:50%;object-fit:cover;border:2px solid var(--parch-edge);" />`
     :`<div style="width:52px;height:52px;border-radius:50%;background:var(--parch-mid);border:2px solid var(--parch-edge);display:flex;align-items:center;justify-content:center;font-family:'Noto Serif JP',serif;font-size:1.2rem;color:var(--ink-light);">${(ninja?.prenom||'?')[0]}</div>`;
-
   document.getElementById('faute-detail-title').textContent=`Faute — ${ninjaName}`;
   document.getElementById('faute-detail-content').innerHTML=`
     <div style="display:flex;gap:14px;align-items:center;margin-bottom:1.5rem;padding-bottom:1rem;border-bottom:1px solid var(--parch-edge);">
-      ${avatar}
-      <div>
+      ${avatar}<div>
         <div style="font-family:'Cinzel',serif;font-size:1rem;margin-bottom:6px;">${ninjaName}</div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;">
-          ${ninja?`<span class="grade-badge ${gradeClass(ninja.grade)}">${ninja.grade}</span><span class="village-badge village-${ninja.village}">${ninja.village}</span>`:''}
-        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">${ninja?`<span class="grade-badge ${gradeClass(ninja.grade)}">${ninja.grade}</span><span class="village-badge village-${ninja.village}">${ninja.village}</span>`:''}</div>
       </div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:1.5rem;">
@@ -896,7 +731,7 @@ function openFauteDetail(fauteId) {
         <div style="font-family:'Cinzel',serif;font-size:0.68rem;color:var(--ink-fade);letter-spacing:0.08em;margin-bottom:4px;">DATE DE L'INCIDENT</div>
         <div style="font-size:0.9rem;color:var(--ink);">${f.date}</div>
       </div>
-      <div style="background:rgba(184,149,90,0.1);border:1px solid rgba(184,149,90,0.4);border-radius:3px;padding:0.8rem;">
+      <div style="background:${f.paye==='oui'?'rgba(26,74,26,0.08)':'rgba(139,26,26,0.06)'};border:1px solid ${f.paye==='oui'?'rgba(45,107,45,0.4)':'rgba(139,26,26,0.3)'};border-radius:3px;padding:0.8rem;">
         <div style="font-family:'Cinzel',serif;font-size:0.68rem;color:var(--ink-fade);letter-spacing:0.08em;margin-bottom:4px;">AMENDE / RÉPARATION</div>
         <div style="font-size:0.9rem;font-family:'Cinzel',serif;color:${payeColor};">${payeLabel}</div>
       </div>
@@ -907,17 +742,30 @@ function openFauteDetail(fauteId) {
     </div>
     <div style="margin-top:1rem;padding-top:0.8rem;border-top:1px solid rgba(184,149,90,0.3);font-size:0.75rem;color:var(--ink-light);font-style:italic;display:flex;justify-content:space-between;align-items:center;">
       <span>Enregistré par <strong style="color:var(--ink);">${f.author||'?'}</strong></span>
-      <span>Référence : <code style="font-family:monospace;font-size:0.7rem;">${f.id}</code></span>
+      <span>Réf : <code style="font-family:monospace;font-size:0.7rem;">${f.id}</code></span>
     </div>`;
+
+  // Zone toggle paiement
+  const toggleZone=document.getElementById('faute-paye-toggle-zone');
+  if(canEditFautePaye()){
+    const isPaye=f.paye==='oui';
+    toggleZone.innerHTML=`
+      <div style="font-family:'Cinzel',serif;font-size:0.72rem;color:var(--ink-fade);letter-spacing:0.08em;margin-bottom:6px;">MODIFIER L'ÉTAT DU PAIEMENT</div>
+      <button class="paye-toggle-btn ${isPaye?'oui':'non'}" onclick="toggleFautePaye('${fauteId}')">
+        ${isPaye?'✓ Payée — Cliquer pour marquer Non payée':'✗ Non payée — Cliquer pour marquer Payée'}
+      </button>`;
+  } else {
+    toggleZone.innerHTML='';
+  }
   document.getElementById('modal-faute-detail').classList.add('open');
 }
 
-function refreshFautes() {
+function refreshFautes(){
   document.getElementById('faute-add-section').style.display=canAddFaute()?'':'none';
   const tbody=document.getElementById('faute-tbody');
   const empty=document.getElementById('faute-empty');
   tbody.innerHTML='';
-  if (db.fautes.length===0) { empty.style.display='block'; return; }
+  if(db.fautes.length===0){empty.style.display='block';return;}
   empty.style.display='none';
   [...db.fautes].reverse().forEach(f=>{
     const ninja=db.ninjas.find(n=>n.id===f.ninjaId);
@@ -925,9 +773,7 @@ function refreshFautes() {
     const typeKey=f.type==='Crime de guerre'?'Crime':'Brise';
     const payeKey=f.paye==='oui'?'oui':'non';
     const payeLabel=f.paye==='oui'?'Oui':'Non';
-    const tr=document.createElement('tr');
-    tr.className='faute-row-clickable';
-    tr.onclick=()=>openFauteDetail(f.id);
+    const tr=document.createElement('tr');tr.className='faute-row-clickable';tr.onclick=()=>openFauteDetail(f.id);
     tr.innerHTML=`<td style="white-space:nowrap;">${f.date}</td>
       <td><span class="fault-pill fault-${typeKey}">${f.type}</span></td>
       <td>${name}</td>
@@ -940,48 +786,40 @@ function refreshFautes() {
   });
 }
 
-// ALERTES — only trigger for faults AFTER last closed jugement
-function clearBadge(id) {
-  const el=document.getElementById(id); if(el) el.style.display='none';
-}
+function clearBadge(id){const el=document.getElementById(id);if(el)el.style.display='none';}
 
-function updateBadge() {
+function updateBadge(){
   const alerte=db.ninjas.filter(n=>{
     const enJug=(db.jugements||[]).some(j=>j.ninjaId===n.id&&j.statut==='en_attente');
-    if (enJug) return false;
+    if(enJug)return false;
     return countNewFaultsSinceLastJugement(n.id)>=3;
   }).length;
   const badge=document.getElementById('alert-badge');
-  badge.style.display=alerte>0?'flex':'none'; badge.textContent=alerte;
-
+  badge.style.display=alerte>0?'flex':'none';badge.textContent=alerte;
   const enAttente=(db.jugements||[]).filter(j=>j.statut==='en_attente').length;
   const jbadge=document.getElementById('jugement-badge');
-  if (jbadge) { jbadge.style.display=enAttente>0?'flex':'none'; jbadge.textContent=enAttente; }
-
+  if(jbadge){jbadge.style.display=enAttente>0?'flex':'none';jbadge.textContent=enAttente;}
   const now=Date.now();
   const detteAlerts=(db.dettes||[]).filter(d=>{
-    if(d.paye) return false;
-    if(d.debitor!=='Konoha') return false;
-    const created=new Date(d.date).getTime();
-    const msElapsed=now-created;
-    const daysPassed=msElapsed/(1000*60*60*24);
-    const cyclePos=daysPassed%7;
-    return (7-cyclePos)<=2;
+    if(d.paye)return false;if(d.debitor!=='Konoha')return false;
+    const created=new Date(d.date).getTime();const msElapsed=now-created;
+    const daysPassed=msElapsed/(1000*60*60*24);const cyclePos=daysPassed%7;
+    return(7-cyclePos)<=2;
   }).length;
   const dbadge=document.getElementById('dette-badge');
-  if (dbadge) { dbadge.style.display=detteAlerts>0?'flex':'none'; dbadge.textContent=detteAlerts; }
+  if(dbadge){dbadge.style.display=detteAlerts>0?'flex':'none';dbadge.textContent=detteAlerts;}
 }
 
-function refreshAlertes() {
+function refreshAlertes(){
   const list=document.getElementById('alerte-list');
   const empty=document.getElementById('alerte-empty');
   const flagged=db.ninjas.filter(n=>{
     const enJug=(db.jugements||[]).some(j=>j.ninjaId===n.id&&j.statut==='en_attente');
-    if (enJug) return false;
+    if(enJug)return false;
     return countNewFaultsSinceLastJugement(n.id)>=3;
   });
   list.innerHTML='';
-  if (flagged.length===0) { empty.style.display='block'; return; }
+  if(flagged.length===0){empty.style.display='block';return;}
   empty.style.display='none';
   flagged.forEach(n=>{
     const newFaults=countNewFaultsSinceLastJugement(n.id);
@@ -989,7 +827,7 @@ function refreshAlertes() {
     const avatar=n.photo
       ?`<img src="${n.photo}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;border:1.5px solid var(--red-seal);" />`
       :`<div style="width:40px;height:40px;border-radius:50%;background:var(--parch-mid);border:1.5px solid var(--red-seal);display:flex;align-items:center;justify-content:center;font-family:'Noto Serif JP',serif;font-size:1rem;color:var(--ink-light);">${n.prenom[0]}</div>`;
-    const div=document.createElement('div'); div.className='alert-card';
+    const div=document.createElement('div');div.className='alert-card';
     div.innerHTML=`<div style="display:flex;align-items:center;gap:12px;">${avatar}
       <div>
         <div style="font-family:'Cinzel',serif;font-size:1rem;">${n.prenom} ${n.nom}</div>
@@ -1003,7 +841,7 @@ function refreshAlertes() {
   });
 }
 
-function openDossier(ninjaId) {
+function openDossier(ninjaId){
   const n=db.ninjas.find(x=>x.id===ninjaId);
   const faults=db.fautes.filter(f=>f.ninjaId===ninjaId);
   const gc=gradeClass(n.grade);
@@ -1012,10 +850,8 @@ function openDossier(ninjaId) {
     ?`<img src="${n.photo}" style="width:64px;height:64px;border-radius:50%;object-fit:cover;border:2px solid var(--parch-edge);" />`
     :`<div style="width:64px;height:64px;border-radius:50%;background:var(--parch-mid);border:2px solid var(--parch-edge);display:flex;align-items:center;justify-content:center;font-family:'Noto Serif JP',serif;font-size:1.5rem;color:var(--ink-light);">${n.prenom[0]}</div>`;
   let html=`<div style="display:flex;gap:14px;align-items:center;margin-bottom:1.5rem;padding-bottom:1rem;border-bottom:1px solid var(--parch-edge);">
-    ${avatar}<div>
-      <div style="font-family:'Cinzel',serif;font-size:1rem;margin-bottom:6px;">${n.prenom} ${n.nom}</div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;"><span class="grade-badge ${gc}">${n.grade}</span><span class="village-badge village-${n.village}">${n.village}</span></div>
-    </div></div>
+    ${avatar}<div><div style="font-family:'Cinzel',serif;font-size:1rem;margin-bottom:6px;">${n.prenom} ${n.nom}</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;"><span class="grade-badge ${gc}">${n.grade}</span><span class="village-badge village-${n.village}">${n.village}</span></div></div></div>
     <div style="font-family:'Cinzel',serif;font-size:0.75rem;color:var(--ink-fade);letter-spacing:0.1em;margin-bottom:1rem;">INFRACTIONS RÉPERTORIÉES (${faults.length})</div>`;
   faults.forEach(f=>{
     const tk=f.type==='Crime de guerre'?'Crime':'Brise';
@@ -1040,120 +876,96 @@ function openDossier(ninjaId) {
   document.getElementById('modal-dossier').classList.add('open');
 }
 
-// JUGEMENTS
-function envoyerJugement(ninjaId) {
-  if (!canJugement()) { alert('Accès non autorisé.'); return; }
-  if (!db.jugements) db.jugements=[];
-  if (db.jugements.some(j=>j.ninjaId===ninjaId&&j.statut==='en_attente')) {
-    alert('Ce ninja est déjà en attente de jugement.'); return;
-  }
+function envoyerJugement(ninjaId){
+  if(!canJugement()){alert('Accès non autorisé.');return;}
+  if(!db.jugements)db.jugements=[];
+  if(db.jugements.some(j=>j.ninjaId===ninjaId&&j.statut==='en_attente')){alert('Ce ninja est déjà en attente de jugement.');return;}
   const n=db.ninjas.find(x=>x.id===ninjaId);
   jugementTargetNinjaId=ninjaId;
   document.getElementById('jugement-modal-title').textContent=`Jugement : ${n.prenom} ${n.nom}`;
   document.getElementById('jugement-ninja-info').textContent=`Grade : ${n.grade} — Village : ${n.village}`;
   document.getElementById('j-date').value=new Date().toLocaleDateString('fr-FR');
-  document.getElementById('j-peine').value='';
-  document.getElementById('j-notes').value='';
+  document.getElementById('j-peine').value='';document.getElementById('j-notes').value='';
   document.getElementById('modal-jugement').classList.add('open');
 }
 
-function confirmJugement() {
+function confirmJugement(){
   const date=document.getElementById('j-date').value.trim();
   const peine=document.getElementById('j-peine').value.trim();
   const notes=document.getElementById('j-notes').value.trim();
-  if (!peine) { alert('Veuillez saisir la peine / résultat.'); return; }
-  if (!db.jugements) db.jugements=[];
+  if(!peine){alert('Veuillez saisir la peine / résultat.');return;}
+  if(!db.jugements)db.jugements=[];
   const jug={id:'j'+Date.now(),ninjaId:jugementTargetNinjaId,date,peine,notes,statut:'en_attente',author:currentUser.username};
   db.jugements.push(jug);
   const n=db.ninjas.find(x=>x.id===jugementTargetNinjaId);
   logAction('jugement_create',`Jugement ouvert : ${n?n.prenom+' '+n.nom:'?'}`,{jugementId:jug.id,ninjaId:jugementTargetNinjaId,peine});
-  closeModal('modal-jugement');
-  scheduleSave();
-  refreshAlertes(); refreshJugements(); refreshNinjas(); updateBadge();
+  closeModal('modal-jugement');scheduleSave();
+  refreshAlertes();refreshJugements();refreshNinjas();updateBadge();
 }
 
-function cloturerJugement(jugementId) {
-  if (!canJugement()) { alert('Accès non autorisé.'); return; }
+function cloturerJugement(jugementId){
+  if(!canJugement()){alert('Accès non autorisé.');return;}
   const j=(db.jugements||[]).find(x=>x.id===jugementId);
-  if (j) { j.statut='clos'; j.closedAt=Date.now(); }
+  if(j){j.statut='clos';j.closedAt=Date.now();}
   const n=db.ninjas.find(x=>x.id===j?.ninjaId);
   logAction('jugement_clos',`Jugement clos : ${n?n.prenom+' '+n.nom:'?'}`,{jugementId,ninjaId:j?.ninjaId});
-  scheduleSave();
-  refreshJugements(); refreshAlertes(); refreshNinjas(); updateBadge();
+  scheduleSave();refreshJugements();refreshAlertes();refreshNinjas();updateBadge();
 }
 
-function ouvrirEditJugement(jugementId) {
-  if (!canJugement()) { alert('Accès non autorisé.'); return; }
-  const j=(db.jugements||[]).find(x=>x.id===jugementId); if(!j) return;
+function ouvrirEditJugement(jugementId){
+  if(!canJugement()){alert('Accès non autorisé.');return;}
+  const j=(db.jugements||[]).find(x=>x.id===jugementId);if(!j)return;
   const n=db.ninjas.find(x=>x.id===j.ninjaId);
   editJugementId=jugementId;
   document.getElementById('edit-jugement-title').textContent=`Modifier : ${n?n.prenom+' '+n.nom:'Ninja inconnu'}`;
   document.getElementById('edit-jugement-ninja-info').textContent=n?`Grade : ${n.grade} — Village : ${n.village}`:'';
-  document.getElementById('ej-statut').value=j.statut;
-  document.getElementById('ej-date').value=j.date;
-  document.getElementById('ej-peine').value=j.peine;
-  document.getElementById('ej-notes').value=j.notes||'';
+  document.getElementById('ej-statut').value=j.statut;document.getElementById('ej-date').value=j.date;
+  document.getElementById('ej-peine').value=j.peine;document.getElementById('ej-notes').value=j.notes||'';
   document.getElementById('modal-edit-jugement').classList.add('open');
 }
 
-function sauvegarderJugement() {
-  if (!editJugementId) return;
-  const j=(db.jugements||[]).find(x=>x.id===editJugementId); if(!j) return;
+function sauvegarderJugement(){
+  if(!editJugementId)return;
+  const j=(db.jugements||[]).find(x=>x.id===editJugementId);if(!j)return;
   const peine=document.getElementById('ej-peine').value.trim();
-  if (!peine) { alert('La peine ne peut pas être vide.'); return; }
+  if(!peine){alert('La peine ne peut pas être vide.');return;}
   const newStatut=document.getElementById('ej-statut').value;
-  // if closing now, record closedAt
-  if (newStatut==='clos'&&j.statut!=='clos') j.closedAt=Date.now();
-  j.statut=newStatut;
-  j.date=document.getElementById('ej-date').value.trim();
-  j.peine=peine;
-  j.notes=document.getElementById('ej-notes').value.trim();
+  if(newStatut==='clos'&&j.statut!=='clos')j.closedAt=Date.now();
+  j.statut=newStatut;j.date=document.getElementById('ej-date').value.trim();j.peine=peine;j.notes=document.getElementById('ej-notes').value.trim();
   logAction('jugement_edit',`Jugement modifié`,{jugementId:editJugementId,statut:newStatut});
-  closeModal('modal-edit-jugement');
-  scheduleSave();
-  refreshJugements(); refreshAlertes(); refreshNinjas(); updateBadge();
+  closeModal('modal-edit-jugement');scheduleSave();
+  refreshJugements();refreshAlertes();refreshNinjas();updateBadge();
 }
 
-function supprimerJugement() {
-  if (!editJugementId) return;
-  if (!confirm('Supprimer définitivement ce jugement des archives ?')) return;
+function supprimerJugement(){
+  if(!editJugementId)return;
+  if(!confirm('Supprimer définitivement ce jugement des archives ?'))return;
   logAction('jugement_delete',`Jugement supprimé`,{jugementId:editJugementId});
   db.jugements=(db.jugements||[]).filter(x=>x.id!==editJugementId);
-  editJugementId=null;
-  closeModal('modal-edit-jugement');
-  scheduleSave();
-  refreshJugements(); refreshAlertes(); refreshNinjas(); updateBadge();
+  editJugementId=null;closeModal('modal-edit-jugement');scheduleSave();
+  refreshJugements();refreshAlertes();refreshNinjas();updateBadge();
 }
 
-function refreshJugements() {
+function refreshJugements(){
   const list=document.getElementById('jugement-list');
   const empty=document.getElementById('jugement-empty');
-  if (!db.jugements) db.jugements=[];
+  if(!db.jugements)db.jugements=[];
   const enAttente=db.jugements.filter(j=>j.statut==='en_attente');
   const clos=db.jugements.filter(j=>j.statut==='clos');
   list.innerHTML='';
-  if (db.jugements.length===0) { empty.style.display='block'; return; }
+  if(db.jugements.length===0){empty.style.display='block';return;}
   empty.style.display='none';
-
-  if (enAttente.length>0) {
+  if(enAttente.length>0){
     list.innerHTML+=`<div style="font-family:'Cinzel',serif;font-size:0.78rem;color:var(--red-seal);letter-spacing:0.1em;margin-bottom:1rem;">EN ATTENTE DE JUGEMENT (${enAttente.length})</div>`;
     enAttente.forEach(j=>{
       const n=db.ninjas.find(x=>x.id===j.ninjaId);
       const name=n?`${n.prenom} ${n.nom}`:'Ninja inconnu';
-      const avatar=n?.photo
-        ?`<img src="${n.photo}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;border:1.5px solid var(--gold);" />`
-        :`<div style="width:40px;height:40px;border-radius:50%;background:var(--parch-mid);border:1.5px solid var(--gold);display:flex;align-items:center;justify-content:center;font-family:'Noto Serif JP',serif;font-size:1rem;color:var(--ink-light);">${(n?.prenom||'?')[0]}</div>`;
+      const avatar=n?.photo?`<img src="${n.photo}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;border:1.5px solid var(--gold);" />`:`<div style="width:40px;height:40px;border-radius:50%;background:var(--parch-mid);border:1.5px solid var(--gold);display:flex;align-items:center;justify-content:center;font-family:'Noto Serif JP',serif;font-size:1rem;color:var(--ink-light);">${(n?.prenom||'?')[0]}</div>`;
       const div=document.createElement('div');
       div.style.cssText='background:linear-gradient(135deg,#fffbe6,var(--parch-light));border:1.5px solid var(--gold);border-radius:3px;padding:1.2rem 1.5rem;margin-bottom:1rem;';
       div.innerHTML=`<div style="display:flex;align-items:center;gap:12px;margin-bottom:1rem;">
-          ${avatar}<div style="flex:1;">
-            <div style="font-family:'Cinzel',serif;font-size:1rem;">${name}</div>
-            <div style="font-size:0.78rem;color:var(--ink-light);font-style:italic;">Jugement fixé au ${j.date} · par ${j.author}</div>
-          </div>
-          ${canJugement()?`<div style="display:flex;gap:6px;">
-            <button class="btn btn-ghost btn-sm" onclick="ouvrirEditJugement('${j.id}')">✏ Modifier</button>
-            <button class="btn btn-success btn-sm" onclick="cloturerJugement('${j.id}')">✓ Clôturer</button>
-          </div>`:''}
+          ${avatar}<div style="flex:1;"><div style="font-family:'Cinzel',serif;font-size:1rem;">${name}</div><div style="font-size:0.78rem;color:var(--ink-light);font-style:italic;">Jugement fixé au ${j.date} · par ${j.author}</div></div>
+          ${canJugement()?`<div style="display:flex;gap:6px;"><button class="btn btn-ghost btn-sm" onclick="ouvrirEditJugement('${j.id}')">✏ Modifier</button><button class="btn btn-success btn-sm" onclick="cloturerJugement('${j.id}')">✓ Clôturer</button></div>`:''}
         </div>
         <div style="background:rgba(184,149,90,0.1);border-left:3px solid var(--gold);padding:0.8rem;border-radius:0 2px 2px 0;">
           <div style="font-family:'Cinzel',serif;font-size:0.72rem;color:var(--ink-fade);letter-spacing:0.08em;margin-bottom:4px;">PEINE / RÉSULTAT</div>
@@ -1163,29 +975,15 @@ function refreshJugements() {
       list.appendChild(div);
     });
   }
-
-  if (clos.length>0) {
-    const sep=document.createElement('div');
-    sep.style.cssText='height:1px;background:var(--parch-edge);opacity:0.4;margin:1.5rem 0;';
-    list.appendChild(sep);
-    const lbl=document.createElement('div');
-    lbl.style.cssText="font-family:'Cinzel',serif;font-size:0.78rem;color:var(--ink-fade);letter-spacing:0.1em;margin-bottom:1rem;";
-    lbl.textContent=`JUGEMENTS CLOS (${clos.length})`;
-    list.appendChild(lbl);
+  if(clos.length>0){
+    const sep=document.createElement('div');sep.style.cssText='height:1px;background:var(--parch-edge);opacity:0.4;margin:1.5rem 0;';list.appendChild(sep);
+    const lbl=document.createElement('div');lbl.style.cssText="font-family:'Cinzel',serif;font-size:0.78rem;color:var(--ink-fade);letter-spacing:0.1em;margin-bottom:1rem;";lbl.textContent=`JUGEMENTS CLOS (${clos.length})`;list.appendChild(lbl);
     clos.forEach(j=>{
-      const n=db.ninjas.find(x=>x.id===j.ninjaId);
-      const name=n?`${n.prenom} ${n.nom}`:'Ninja inconnu';
-      const div=document.createElement('div');
-      div.style.cssText='background:rgba(184,149,90,0.05);border:1px solid rgba(184,149,90,0.3);border-radius:3px;padding:1rem 1.5rem;margin-bottom:0.8rem;';
+      const n=db.ninjas.find(x=>x.id===j.ninjaId);const name=n?`${n.prenom} ${n.nom}`:'Ninja inconnu';
+      const div=document.createElement('div');div.style.cssText='background:rgba(184,149,90,0.05);border:1px solid rgba(184,149,90,0.3);border-radius:3px;padding:1rem 1.5rem;margin-bottom:0.8rem;';
       div.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
-          <div>
-            <span style="font-family:'Cinzel',serif;font-size:0.88rem;">${name}</span>
-            <span style="font-size:0.75rem;color:var(--ink-light);font-style:italic;margin-left:8px;">${j.date}</span>
-          </div>
-          <div style="display:flex;align-items:center;gap:8px;">
-            <span style="font-size:0.72rem;color:var(--konoha-green);font-family:'Cinzel',serif;">✓ Clos</span>
-            ${canJugement()?`<button class="btn btn-ghost btn-sm" onclick="ouvrirEditJugement('${j.id}')">✏ Modifier</button>`:''}
-          </div>
+          <div><span style="font-family:'Cinzel',serif;font-size:0.88rem;">${name}</span><span style="font-size:0.75rem;color:var(--ink-light);font-style:italic;margin-left:8px;">${j.date}</span></div>
+          <div style="display:flex;align-items:center;gap:8px;"><span style="font-size:0.72rem;color:var(--konoha-green);font-family:'Cinzel',serif;">✓ Clos</span>${canJugement()?`<button class="btn btn-ghost btn-sm" onclick="ouvrirEditJugement('${j.id}')">✏ Modifier</button>`:''}</div>
         </div>
         <div style="font-size:0.82rem;color:var(--ink-fade);margin-top:6px;font-style:italic;">${j.peine}</div>
         ${j.notes?`<div style="font-size:0.78rem;color:var(--ink-light);font-style:italic;margin-top:4px;">${j.notes}</div>`:''}`;
@@ -1194,43 +992,26 @@ function refreshJugements() {
   }
 }
 
-// PROFIL NINJA
-function openProfil(ninjaId) {
+function openProfil(ninjaId){
   const n=db.ninjas.find(x=>x.id===ninjaId);
   const faults=db.fautes.filter(f=>f.ninjaId===ninjaId);
   const jugs=(db.jugements||[]).filter(j=>j.ninjaId===ninjaId);
   const gc=gradeClass(n.grade);
   document.getElementById('profil-title').textContent=`Profil — ${n.prenom} ${n.nom}`;
-  const avatar=n.photo
-    ?`<img src="${n.photo}" style="width:80px;height:80px;border-radius:50%;object-fit:cover;border:3px solid var(--parch-edge);" />`
-    :`<div style="width:80px;height:80px;border-radius:50%;background:var(--parch-mid);border:3px solid var(--parch-edge);display:flex;align-items:center;justify-content:center;font-family:'Noto Serif JP',serif;font-size:2rem;color:var(--ink-light);">${n.prenom[0]}</div>`;
+  const avatar=n.photo?`<img src="${n.photo}" style="width:80px;height:80px;border-radius:50%;object-fit:cover;border:3px solid var(--parch-edge);" />`:`<div style="width:80px;height:80px;border-radius:50%;background:var(--parch-mid);border:3px solid var(--parch-edge);display:flex;align-items:center;justify-content:center;font-family:'Noto Serif JP',serif;font-size:2rem;color:var(--ink-light);">${n.prenom[0]}</div>`;
   const brises=faults.filter(f=>f.type==='Brisé de traité');
   const crimes=faults.filter(f=>f.type==='Crime de guerre');
   const newFaults=countNewFaultsSinceLastJugement(ninjaId);
   let html=`<div style="display:flex;gap:16px;align-items:center;margin-bottom:1.5rem;padding-bottom:1.2rem;border-bottom:1px solid var(--parch-edge);">
-    ${avatar}<div style="flex:1;">
-      <div style="font-family:'Cinzel',serif;font-size:1.2rem;margin-bottom:8px;">${n.prenom} ${n.nom}</div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;"><span class="grade-badge ${gc}">${n.grade}</span><span class="village-badge village-${n.village}">${n.village}</span></div>
-    </div></div>
+    ${avatar}<div style="flex:1;"><div style="font-family:'Cinzel',serif;font-size:1.2rem;margin-bottom:8px;">${n.prenom} ${n.nom}</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;"><span class="grade-badge ${gc}">${n.grade}</span><span class="village-badge village-${n.village}">${n.village}</span></div></div></div>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;margin-bottom:1.5rem;">
-      <div style="background:${brises.length>0?'#fff8e1':'rgba(184,149,90,0.08)'};border:1px solid ${brises.length>0?'#ffc107':'rgba(184,149,90,0.3)'};border-radius:3px;padding:0.8rem;text-align:center;">
-        <div style="font-family:'Cinzel',serif;font-size:1.4rem;color:${brises.length>0?'#856404':'var(--ink-light)'};">${brises.length}</div>
-        <div style="font-size:0.68rem;color:var(--ink-fade);font-family:'Cinzel',serif;">Brisés</div>
-      </div>
-      <div style="background:${crimes.length>0?'#fde8e8':'rgba(184,149,90,0.08)'};border:1px solid ${crimes.length>0?'var(--red-seal)':'rgba(184,149,90,0.3)'};border-radius:3px;padding:0.8rem;text-align:center;">
-        <div style="font-family:'Cinzel',serif;font-size:1.4rem;color:${crimes.length>0?'var(--red-seal)':'var(--ink-light)'};">${crimes.length}</div>
-        <div style="font-size:0.68rem;color:var(--ink-fade);font-family:'Cinzel',serif;">Crimes</div>
-      </div>
-      <div style="background:${newFaults>=3?'#fde8e8':'rgba(184,149,90,0.08)'};border:1px solid ${newFaults>=3?'var(--red-seal)':'rgba(184,149,90,0.3)'};border-radius:3px;padding:0.8rem;text-align:center;">
-        <div style="font-family:'Cinzel',serif;font-size:1.4rem;color:${newFaults>=3?'var(--red-seal)':'var(--ink-light)'};">${newFaults}</div>
-        <div style="font-size:0.68rem;color:var(--ink-fade);font-family:'Cinzel',serif;">Nouv. fautes</div>
-      </div>
-      <div style="background:${jugs.length>0?'#fffbe6':'rgba(184,149,90,0.08)'};border:1px solid ${jugs.length>0?'var(--gold)':'rgba(184,149,90,0.3)'};border-radius:3px;padding:0.8rem;text-align:center;">
-        <div style="font-family:'Cinzel',serif;font-size:1.4rem;color:${jugs.length>0?'var(--gold)':'var(--ink-light)'};">${jugs.length}</div>
-        <div style="font-size:0.68rem;color:var(--ink-fade);font-family:'Cinzel',serif;">Jugements</div>
-      </div>
+      <div style="background:${brises.length>0?'#fff8e1':'rgba(184,149,90,0.08)'};border:1px solid ${brises.length>0?'#ffc107':'rgba(184,149,90,0.3)'};border-radius:3px;padding:0.8rem;text-align:center;"><div style="font-family:'Cinzel',serif;font-size:1.4rem;color:${brises.length>0?'#856404':'var(--ink-light)'};">${brises.length}</div><div style="font-size:0.68rem;color:var(--ink-fade);font-family:'Cinzel',serif;">Brisés</div></div>
+      <div style="background:${crimes.length>0?'#fde8e8':'rgba(184,149,90,0.08)'};border:1px solid ${crimes.length>0?'var(--red-seal)':'rgba(184,149,90,0.3)'};border-radius:3px;padding:0.8rem;text-align:center;"><div style="font-family:'Cinzel',serif;font-size:1.4rem;color:${crimes.length>0?'var(--red-seal)':'var(--ink-light)'};">${crimes.length}</div><div style="font-size:0.68rem;color:var(--ink-fade);font-family:'Cinzel',serif;">Crimes</div></div>
+      <div style="background:${newFaults>=3?'#fde8e8':'rgba(184,149,90,0.08)'};border:1px solid ${newFaults>=3?'var(--red-seal)':'rgba(184,149,90,0.3)'};border-radius:3px;padding:0.8rem;text-align:center;"><div style="font-family:'Cinzel',serif;font-size:1.4rem;color:${newFaults>=3?'var(--red-seal)':'var(--ink-light)'};">${newFaults}</div><div style="font-size:0.68rem;color:var(--ink-fade);font-family:'Cinzel',serif;">Nouv. fautes</div></div>
+      <div style="background:${jugs.length>0?'#fffbe6':'rgba(184,149,90,0.08)'};border:1px solid ${jugs.length>0?'var(--gold)':'rgba(184,149,90,0.3)'};border-radius:3px;padding:0.8rem;text-align:center;"><div style="font-family:'Cinzel',serif;font-size:1.4rem;color:${jugs.length>0?'var(--gold)':'var(--ink-light)'};">${jugs.length}</div><div style="font-size:0.68rem;color:var(--ink-fade);font-family:'Cinzel',serif;">Jugements</div></div>
     </div>`;
-  if (faults.length>0) {
+  if(faults.length>0){
     html+=`<div style="font-family:'Cinzel',serif;font-size:0.75rem;color:var(--ink-fade);letter-spacing:0.1em;margin-bottom:0.8rem;">FAUTES COMMISES</div>`;
     faults.forEach(f=>{
       const tk=f.type==='Crime de guerre'?'Crime':'Brise';
@@ -1245,14 +1026,11 @@ function openProfil(ninjaId) {
         <div style="font-size:0.82rem;font-style:italic;color:var(--ink-fade);">${f.details.substring(0,100)}${f.details.length>100?'…':''}</div>
       </div>`;
     });
-  } else {
-    html+=`<div style="text-align:center;padding:1rem;color:var(--ink-light);font-style:italic;font-size:0.88rem;">Aucune faute enregistrée.</div>`;
-  }
-  if (jugs.length>0) {
+  }else{html+=`<div style="text-align:center;padding:1rem;color:var(--ink-light);font-style:italic;font-size:0.88rem;">Aucune faute enregistrée.</div>`;}
+  if(jugs.length>0){
     html+=`<div style="font-family:'Cinzel',serif;font-size:0.75rem;color:var(--ink-fade);letter-spacing:0.1em;margin:1rem 0 0.8rem;">JUGEMENTS</div>`;
     jugs.forEach(j=>{
-      const sc=j.statut==='en_attente'?'var(--gold)':'var(--konoha-green)';
-      const sl=j.statut==='en_attente'?'⚖ En attente':'✓ Clos';
+      const sc=j.statut==='en_attente'?'var(--gold)':'var(--konoha-green)';const sl=j.statut==='en_attente'?'⚖ En attente':'✓ Clos';
       html+=`<div style="margin-bottom:0.6rem;padding:0.7rem;background:rgba(201,162,39,0.08);border-left:3px solid ${sc};border-radius:0 2px 2px 0;">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;flex-wrap:wrap;gap:4px;">
           <span style="font-size:0.72rem;color:var(--ink-light);">Jugement du ${j.date}</span>
@@ -1267,37 +1045,32 @@ function openProfil(ninjaId) {
   document.getElementById('modal-profil').classList.add('open');
 }
 
-// TRESORERIE
-function openTxModal(mode) {
-  if (!canManageTreasury()) { alert('Votre grade ne permet pas cette action.'); return; }
-  txMode=mode;
-  document.getElementById('tx-modal-title').textContent=mode==='add'?'+ Ajout de fonds':'− Retrait de fonds';
-  document.getElementById('tx-amount').value='';
-  document.getElementById('tx-detail').value='';
+function openTxModal(mode){
+  if(!canManageTreasury()){alert('Votre grade ne permet pas cette action.');return;}
+  txMode=mode;document.getElementById('tx-modal-title').textContent=mode==='add'?'+ Ajout de fonds':'− Retrait de fonds';
+  document.getElementById('tx-amount').value='';document.getElementById('tx-detail').value='';
   document.getElementById('modal-tx').classList.add('open');
 }
-function confirmTx() {
+function confirmTx(){
   const amount=parseInt(document.getElementById('tx-amount').value);
   const detail=document.getElementById('tx-detail').value.trim();
-  if (!amount||amount<=0) { alert('Montant invalide.'); return; }
-  if (!detail) { alert('Veuillez ajouter un motif.'); return; }
-  if (txMode==='remove'&&amount>db.balance) { alert('Fonds insuffisants.'); return; }
+  if(!amount||amount<=0){alert('Montant invalide.');return;}
+  if(!detail){alert('Veuillez ajouter un motif.');return;}
+  if(txMode==='remove'&&amount>db.balance){alert('Fonds insuffisants.');return;}
   db.balance+=(txMode==='add'?1:-1)*amount;
-  db.transactions.unshift({id:'t'+Date.now(),mode:txMode,amount,detail,
-    date:new Date().toLocaleDateString('fr-FR'),author:currentUser.username});
+  db.transactions.unshift({id:'t'+Date.now(),mode:txMode,amount,detail,date:new Date().toLocaleDateString('fr-FR'),author:currentUser.username});
   logAction('treasury_tx',`${txMode==='add'?'Ajout':'Retrait'} trésorerie : ${amount} Ryō — ${detail}`,{mode:txMode,amount});
-  closeModal('modal-tx'); refreshTreasury(); scheduleSave();
+  closeModal('modal-tx');refreshTreasury();scheduleSave();
 }
-function refreshTreasury() {
+function refreshTreasury(){
   document.getElementById('treasury-btns').style.display=canManageTreasury()?'':'none';
   document.getElementById('balance-display').textContent=db.balance.toLocaleString('fr-FR')+' Ryō';
-  const list=document.getElementById('tx-list');
-  const empty=document.getElementById('tx-empty');
+  const list=document.getElementById('tx-list'),empty=document.getElementById('tx-empty');
   list.innerHTML='';
-  if (db.transactions.length===0) { empty.style.display='block'; return; }
+  if(db.transactions.length===0){empty.style.display='block';return;}
   empty.style.display='none';
   db.transactions.forEach(tx=>{
-    const div=document.createElement('div'); div.className='tx-row';
+    const div=document.createElement('div');div.className='tx-row';
     div.innerHTML=`<div class="tx-sign ${tx.mode==='add'?'plus':'minus'}">${tx.mode==='add'?'+':'−'}</div>
       <div class="tx-detail-col"><div>${tx.detail}</div><div class="tx-meta">${tx.date} · par ${tx.author}</div></div>
       <div class="tx-amount ${tx.mode==='add'?'plus':'minus'}">${tx.mode==='add'?'+':'−'}${tx.amount.toLocaleString('fr-FR')} Ryō</div>`;
@@ -1305,283 +1078,177 @@ function refreshTreasury() {
   });
 }
 
-// DETTES
-function toggleDetteNinja() {
-  const val=document.querySelector('input[name="dette-debitor"]:checked')?.value;
-  document.getElementById('dette-ninja-select').style.display=val==='ninja'?'':'none';
-}
-function calculerMontantActuel(dette) {
-  const now=Date.now();
-  const created=new Date(dette.date).getTime();
-  const msElapsed=now-created;
-  const daysPassed=Math.floor(msElapsed/(1000*60*60*24));
-  const cycles=Math.floor(daysPassed/7);
-  let montant=dette.montantInitial;
-  for(let i=0;i<cycles;i++) montant=Math.round(montant*1.20);
+function toggleDetteNinja(){const val=document.querySelector('input[name="dette-debitor"]:checked')?.value;document.getElementById('dette-ninja-select').style.display=val==='ninja'?'':'none';}
+function calculerMontantActuel(dette){
+  const now=Date.now(),created=new Date(dette.date).getTime(),msElapsed=now-created;
+  const daysPassed=Math.floor(msElapsed/(1000*60*60*24)),cycles=Math.floor(daysPassed/7);
+  let montant=dette.montantInitial;for(let i=0;i<cycles;i++)montant=Math.round(montant*1.20);
   return{montant,cycles,daysPassed};
 }
-function joursAvantMajoration(dette) {
-  const now=Date.now();
-  const created=new Date(dette.date).getTime();
-  const msElapsed=now-created;
-  const daysPassed=msElapsed/(1000*60*60*24);
-  const cyclePos=daysPassed%7;
-  return Math.ceil(7-cyclePos);
+function joursAvantMajoration(dette){
+  const now=Date.now(),created=new Date(dette.date).getTime(),msElapsed=now-created;
+  const daysPassed=msElapsed/(1000*60*60*24),cyclePos=daysPassed%7;return Math.ceil(7-cyclePos);
 }
-function addDette() {
-  if (!canManageDettes()) { alert('Accès non autorisé.'); return; }
+function addDette(){
+  if(!canManageDettes()){alert('Accès non autorisé.');return;}
   const debitorType=document.querySelector('input[name="dette-debitor"]:checked')?.value;
   const creancier=document.querySelector('input[name="dette-creancier"]:checked')?.value;
   const montant=parseInt(document.getElementById('d-montant').value);
   const date=document.getElementById('d-date').value;
   const motif=document.getElementById('d-motif').value.trim();
   let ninjaId=null;
-  if (debitorType==='ninja') {
-    ninjaId=document.getElementById('d-ninja').value;
-    if (!ninjaId) { alert('Sélectionnez un ninja.'); return; }
-  }
-  if (!montant||montant<=0) { alert('Montant invalide.'); return; }
-  if (!date) { alert('Veuillez indiquer une date.'); return; }
-  if (!motif) { alert('Veuillez indiquer le motif.'); return; }
-  if (!db.dettes) db.dettes=[];
-  const dette={id:'d'+Date.now(),debitor:debitorType,ninjaId,creancier,
-    montantInitial:montant,date,motif,paye:false,
-    author:currentUser.username,createdAt:new Date().toLocaleDateString('fr-FR')};
+  if(debitorType==='ninja'){ninjaId=document.getElementById('d-ninja').value;if(!ninjaId){alert('Sélectionnez un ninja.');return;}}
+  if(!montant||montant<=0){alert('Montant invalide.');return;}
+  if(!date){alert('Veuillez indiquer une date.');return;}
+  if(!motif){alert('Veuillez indiquer le motif.');return;}
+  if(!db.dettes)db.dettes=[];
+  const dette={id:'d'+Date.now(),debitor:debitorType,ninjaId,creancier,montantInitial:montant,date,motif,paye:false,author:currentUser.username,createdAt:new Date().toLocaleDateString('fr-FR')};
   db.dettes.push(dette);
   logAction('dette_add',`Dette enregistrée : ${debitorType} → ${creancier} — ${montant} Ryō`,{detteId:dette.id,montant});
-  document.getElementById('d-montant').value='';
-  document.getElementById('d-motif').value='';
-  document.getElementById('d-date').value=new Date().toISOString().split('T')[0];
-  refreshDettes(); updateBadge(); scheduleSave();
+  document.getElementById('d-montant').value='';document.getElementById('d-motif').value='';document.getElementById('d-date').value=new Date().toISOString().split('T')[0];
+  refreshDettes();updateBadge();scheduleSave();
 }
-function refreshDettes() {
-  if (!db.dettes) db.dettes=[];
-  const list=document.getElementById('dette-list');
-  const empty=document.getElementById('dette-empty');
-  const banner=document.getElementById('dette-alert-banner');
-  const bannerContent=document.getElementById('dette-alert-content');
+function refreshDettes(){
+  if(!db.dettes)db.dettes=[];
+  const list=document.getElementById('dette-list'),empty=document.getElementById('dette-empty');
+  const banner=document.getElementById('dette-alert-banner'),bannerContent=document.getElementById('dette-alert-content');
   document.getElementById('dette-add-section').style.display=canManageDettes()?'':'none';
-  const actives=db.dettes.filter(d=>!d.paye);
-  const payees=db.dettes.filter(d=>d.paye);
+  const actives=db.dettes.filter(d=>!d.paye),payees=db.dettes.filter(d=>d.paye);
   const imminentes=actives.filter(d=>d.debitor==='Konoha'&&joursAvantMajoration(d)<=2);
-  if (imminentes.length>0) {
-    banner.classList.add('visible');
-    bannerContent.innerHTML=imminentes.map(d=>{
-      const{montant}=calculerMontantActuel(d);
-      const jours=joursAvantMajoration(d);
-      return`→ Dette Konoha envers ${d.creancier} : <strong>${montant.toLocaleString('fr-FR')} Ryō</strong> — majoration dans <strong>${jours} jour(s)</strong>`;
-    }).join('<br/>');
-  } else banner.classList.remove('visible');
+  if(imminentes.length>0){banner.classList.add('visible');bannerContent.innerHTML=imminentes.map(d=>{const{montant}=calculerMontantActuel(d);const jours=joursAvantMajoration(d);return`→ Dette Konoha envers ${d.creancier} : <strong>${montant.toLocaleString('fr-FR')} Ryō</strong> — majoration dans <strong>${jours} jour(s)</strong>`;}).join('<br/>');}
+  else banner.classList.remove('visible');
   list.innerHTML='';
-  if (actives.length===0&&payees.length===0) { empty.style.display='block'; return; }
+  if(actives.length===0&&payees.length===0){empty.style.display='block';return;}
   empty.style.display='none';
-  if (actives.length>0) {
+  if(actives.length>0){
     list.innerHTML+=`<div style="font-family:'Cinzel',serif;font-size:0.78rem;color:var(--ink-fade);letter-spacing:0.1em;margin-bottom:1rem;">DETTES ACTIVES (${actives.length})</div>`;
     actives.forEach(d=>{
-      const{montant,cycles}=calculerMontantActuel(d);
-      const jours=joursAvantMajoration(d);
+      const{montant,cycles}=calculerMontantActuel(d);const jours=joursAvantMajoration(d);
       const progressPct=Math.min(100,Math.round(((7-jours)/7)*100));
-      const isKonoha=d.debitor==='Konoha';
-      const isUrgent=isKonoha&&jours<=2;
-      const isWarning=isKonoha&&jours<=4&&!isUrgent;
-      let debitorLabel=d.debitor==='ninja'
-        ?(()=>{const n=db.ninjas.find(x=>x.id===d.ninjaId);return n?`${n.prenom} ${n.nom}`:'Ninja inconnu';})()
-        :d.debitor;
-      const div=document.createElement('div');
-      div.className='dette-card'+(isUrgent?' urgent':isWarning?' warning':'');
+      const isKonoha=d.debitor==='Konoha',isUrgent=isKonoha&&jours<=2,isWarning=isKonoha&&jours<=4&&!isUrgent;
+      let debitorLabel=d.debitor==='ninja'?(()=>{const n=db.ninjas.find(x=>x.id===d.ninjaId);return n?`${n.prenom} ${n.nom}`:'Ninja inconnu';})():d.debitor;
+      const div=document.createElement('div');div.className='dette-card'+(isUrgent?' urgent':isWarning?' warning':'');
       div.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:1rem;">
-          <div>
-            <div style="font-family:'Cinzel',serif;font-size:0.88rem;margin-bottom:4px;">
-              <span style="color:var(--red-seal);">${debitorLabel}</span>
-              <span style="color:var(--ink-fade);font-size:0.8rem;"> doit à </span>
-              <span style="color:var(--konoha-green);">${d.creancier}</span>
-            </div>
-            <div style="font-size:0.75rem;color:var(--ink-light);font-style:italic;">Créée le ${d.createdAt} · par ${d.author}</div>
-          </div>
-          <div style="text-align:right;">
-            <div style="font-family:'Cinzel',serif;font-size:1.3rem;color:${isUrgent?'var(--red-seal)':isWarning?'var(--gold)':'var(--ink)'};">${montant.toLocaleString('fr-FR')} Ryō</div>
-            ${cycles>0?`<div style="font-size:0.72rem;color:var(--red-seal);font-style:italic;">+${cycles}× majoré 20% (initial: ${d.montantInitial.toLocaleString('fr-FR')} Ryō)</div>`:`<div style="font-size:0.72rem;color:var(--ink-light);font-style:italic;">Montant initial</div>`}
-          </div>
+          <div><div style="font-family:'Cinzel',serif;font-size:0.88rem;margin-bottom:4px;"><span style="color:var(--red-seal);">${debitorLabel}</span><span style="color:var(--ink-fade);font-size:0.8rem;"> doit à </span><span style="color:var(--konoha-green);">${d.creancier}</span></div><div style="font-size:0.75rem;color:var(--ink-light);font-style:italic;">Créée le ${d.createdAt} · par ${d.author}</div></div>
+          <div style="text-align:right;"><div style="font-family:'Cinzel',serif;font-size:1.3rem;color:${isUrgent?'var(--red-seal)':isWarning?'var(--gold)':'var(--ink)'};">${montant.toLocaleString('fr-FR')} Ryō</div>${cycles>0?`<div style="font-size:0.72rem;color:var(--red-seal);font-style:italic;">+${cycles}× majoré 20% (initial: ${d.montantInitial.toLocaleString('fr-FR')} Ryō)</div>`:`<div style="font-size:0.72rem;color:var(--ink-light);font-style:italic;">Montant initial</div>`}</div>
         </div>
         <div style="font-size:0.83rem;color:var(--ink-fade);font-style:italic;margin-bottom:0.8rem;">${d.motif}</div>
-        ${isKonoha?`<div style="margin-bottom:0.8rem;">
-          <div style="display:flex;justify-content:space-between;font-size:0.72rem;color:var(--ink-light);margin-bottom:4px;">
-            <span>Prochaine majoration</span>
-            <span style="color:${isUrgent?'var(--red-seal)':isWarning?'var(--gold)':'var(--ink-light)'};">${jours} jour(s)</span>
-          </div>
-          <div class="progress-bar-wrap"><div class="progress-bar" style="width:${progressPct}%;background:${isUrgent?'var(--red-seal)':isWarning?'var(--gold)':'var(--konoha-green)'};"></div></div>
-        </div>`:''}
+        ${isKonoha?`<div style="margin-bottom:0.8rem;"><div style="display:flex;justify-content:space-between;font-size:0.72rem;color:var(--ink-light);margin-bottom:4px;"><span>Prochaine majoration</span><span style="color:${isUrgent?'var(--red-seal)':isWarning?'var(--gold)':'var(--ink-light)'};">${jours} jour(s)</span></div><div class="progress-bar-wrap"><div class="progress-bar" style="width:${progressPct}%;background:${isUrgent?'var(--red-seal)':isWarning?'var(--gold)':'var(--konoha-green)'};"></div></div></div>`:''}
         ${canManageDettes()?`<div class="flex-end"><button class="btn btn-success btn-sm" onclick="ouvrirConfirmPaye('${d.id}','${debitorLabel}',${montant})">✓ Marquer comme payée</button></div>`:''}`;
       list.appendChild(div);
     });
   }
-  if (payees.length>0) {
-    const sep=document.createElement('div');
-    sep.style.cssText='height:1px;background:var(--parch-edge);opacity:0.4;margin:1.5rem 0;';
-    list.appendChild(sep);
-    const lbl=document.createElement('div');
-    lbl.style.cssText="font-family:'Cinzel',serif;font-size:0.78rem;color:var(--ink-fade);letter-spacing:0.1em;margin-bottom:1rem;";
-    lbl.textContent=`DETTES REMBOURSÉES (${payees.length})`;
-    list.appendChild(lbl);
+  if(payees.length>0){
+    const sep=document.createElement('div');sep.style.cssText='height:1px;background:var(--parch-edge);opacity:0.4;margin:1.5rem 0;';list.appendChild(sep);
+    const lbl=document.createElement('div');lbl.style.cssText="font-family:'Cinzel',serif;font-size:0.78rem;color:var(--ink-fade);letter-spacing:0.1em;margin-bottom:1rem;";lbl.textContent=`DETTES REMBOURSÉES (${payees.length})`;list.appendChild(lbl);
     payees.forEach(d=>{
-      const debitorLabel=d.debitor==='ninja'
-        ?(()=>{const n=db.ninjas.find(x=>x.id===d.ninjaId);return n?`${n.prenom} ${n.nom}`:'Ninja inconnu';})()
-        :d.debitor;
-      const div=document.createElement('div');
-      div.style.cssText='background:rgba(26,74,26,0.05);border:1px solid rgba(45,107,45,0.3);border-radius:3px;padding:1rem 1.5rem;margin-bottom:0.8rem;opacity:0.75;';
-      div.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
-          <div><span style="font-family:'Cinzel',serif;font-size:0.88rem;">${debitorLabel} → ${d.creancier}</span><span style="font-size:0.75rem;color:var(--ink-light);font-style:italic;margin-left:8px;">${d.createdAt}</span></div>
-          <span style="font-size:0.72rem;color:var(--konoha-green);font-family:'Cinzel',serif;">✓ Remboursée</span>
-        </div>
+      const debitorLabel=d.debitor==='ninja'?(()=>{const n=db.ninjas.find(x=>x.id===d.ninjaId);return n?`${n.prenom} ${n.nom}`:'Ninja inconnu';})():d.debitor;
+      const div=document.createElement('div');div.style.cssText='background:rgba(26,74,26,0.05);border:1px solid rgba(45,107,45,0.3);border-radius:3px;padding:1rem 1.5rem;margin-bottom:0.8rem;opacity:0.75;';
+      div.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;"><div><span style="font-family:'Cinzel',serif;font-size:0.88rem;">${debitorLabel} → ${d.creancier}</span><span style="font-size:0.75rem;color:var(--ink-light);font-style:italic;margin-left:8px;">${d.createdAt}</span></div><span style="font-size:0.72rem;color:var(--konoha-green);font-family:'Cinzel',serif;">✓ Remboursée</span></div>
         <div style="font-size:0.82rem;color:var(--ink-fade);margin-top:4px;font-style:italic;">${d.motif} · ${d.montantInitial.toLocaleString('fr-FR')} Ryō initial</div>`;
       list.appendChild(div);
     });
   }
 }
-function ouvrirConfirmPaye(detteId,debitorLabel,montant) {
+function ouvrirConfirmPaye(detteId,debitorLabel,montant){
   dettePayeId=detteId;
   document.getElementById('confirm-paye-info').innerHTML=`Confirmez-vous le remboursement de la dette de <strong>${debitorLabel}</strong> pour un montant de <strong>${montant.toLocaleString('fr-FR')} Ryō</strong> ?`;
   document.getElementById('confirm-paye').classList.add('open');
 }
-function closeConfirmPaye() { dettePayeId=null; document.getElementById('confirm-paye').classList.remove('open'); }
-function confirmerPaye() {
-  if (!db.dettes||!dettePayeId) return;
+function closeConfirmPaye(){dettePayeId=null;document.getElementById('confirm-paye').classList.remove('open');}
+function confirmerPaye(){
+  if(!db.dettes||!dettePayeId)return;
   const d=db.dettes.find(x=>x.id===dettePayeId);
-  if (d) { d.paye=true; logAction('dette_paye',`Dette marquée payée : ${d.debitor} → ${d.creancier}`,{detteId:dettePayeId}); }
-  closeConfirmPaye(); refreshDettes(); updateBadge(); scheduleSave();
+  if(d){d.paye=true;logAction('dette_paye',`Dette marquée payée : ${d.debitor} → ${d.creancier}`,{detteId:dettePayeId});}
+  closeConfirmPaye();refreshDettes();updateBadge();scheduleSave();
 }
 
-// COMPTES — admin AND gérant can manage
-function refreshComptes() {
+function refreshComptes(){
   const cont=document.getElementById('comptes-content');
-  if (!canManageUsers()) {
-    cont.innerHTML=`<div class="access-denied"><div style="font-family:'Cinzel',serif;font-size:1.1rem;">⊗ Accès Restreint</div><p>Seuls l'Administrateur et les Gérants peuvent gérer les comptes diplomatiques.</p></div>`;
-    return;
-  }
+  if(!canManageUsers()){cont.innerHTML=`<div class="access-denied"><div style="font-family:'Cinzel',serif;font-size:1.1rem;">⊗ Accès Restreint</div><p>Seuls l'Administrateur et les Gérants peuvent gérer les comptes diplomatiques.</p></div>`;return;}
   let html=`<table><thead><tr><th>Identifiant</th><th>Grade</th><th>Statut</th><th>Actions</th></tr></thead><tbody>`;
   db.users.forEach(u=>{
     const isSystemAdmin=u.id==='u0';
-    const status=u.approved
-      ?`<span style="color:var(--konoha-green);font-size:0.8rem;">✓ Actif</span>`
-      :`<span style="color:var(--red-seal);font-size:0.8rem;">En attente</span>`;
-    // gérant cannot promote to admin, cannot edit other admins
+    const status=u.approved?`<span style="color:var(--konoha-green);font-size:0.8rem;">✓ Actif</span>`:`<span style="color:var(--red-seal);font-size:0.8rem;">En attente</span>`;
     const canEdit=!isSystemAdmin&&!(u.role==='admin'&&currentUser.role==='gerant');
     const actions=canEdit
-      ?`<div style="display:flex;gap:6px;flex-wrap:wrap;">
-          <button class="btn btn-ghost btn-sm" onclick="openCasier('${u.id}','${u.username}')">📋 Casier</button>
-          <button class="btn btn-ghost btn-sm" onclick="openRoleModal('${u.id}','${u.username}')">Grade</button>
-          ${!u.approved?`<button class="btn btn-success btn-sm" onclick="approveUser('${u.id}')">✓ Valider</button>`:''}
-        </div>`
+      ?`<div style="display:flex;gap:6px;flex-wrap:wrap;"><button class="btn btn-ghost btn-sm" onclick="openCasier('${u.id}','${u.username}')">📋 Casier</button><button class="btn btn-ghost btn-sm" onclick="openRoleModal('${u.id}','${u.username}')">Grade</button>${!u.approved?`<button class="btn btn-success btn-sm" onclick="approveUser('${u.id}')">✓ Valider</button>`:''}</div>`
       :`<div style="display:flex;gap:6px;"><button class="btn btn-ghost btn-sm" onclick="openCasier('${u.id}','${u.username}')">📋 Casier</button><span style="font-size:0.75rem;color:var(--ink-fade);">Compte protégé</span></div>`;
     html+=`<tr><td>${u.username}</td><td><span class="role-${u.role}">${ROLES[u.role]||u.role}</span></td><td>${status}</td><td>${actions}</td></tr>`;
   });
-  html+=`</tbody></table>`;
-  cont.innerHTML=html;
+  html+=`</tbody></table>`;cont.innerHTML=html;
 }
-
-function approveUser(id) {
-  if (!canManageUsers()) return;
+function approveUser(id){
+  if(!canManageUsers())return;
   const u=db.users.find(x=>x.id===id);
-  if (u) { u.approved=true; logAction('user_approve',`Compte validé : ${u.username}`,{userId:id}); }
-  refreshComptes(); scheduleSave();
+  if(u){u.approved=true;logAction('user_approve',`Compte validé : ${u.username}`,{userId:id});}
+  refreshComptes();scheduleSave();
 }
-
-function openRoleModal(id,username) {
-  if (!canManageUsers()) return;
-  roleTargetId=id;
-  document.getElementById('role-username').textContent='Shinobi : '+username;
-  const u=db.users.find(x=>x.id===id);
-  if (u) document.getElementById('role-select').value=u.role;
-  // gérant cannot assign admin role
+function openRoleModal(id,username){
+  if(!canManageUsers())return;
+  roleTargetId=id;document.getElementById('role-username').textContent='Shinobi : '+username;
+  const u=db.users.find(x=>x.id===id);if(u)document.getElementById('role-select').value=u.role;
   const sel=document.getElementById('role-select');
-  [...sel.options].forEach(o=>{ o.disabled=(o.value==='admin'&&currentUser.role==='gerant'); });
+  [...sel.options].forEach(o=>{o.disabled=(o.value==='admin'&&currentUser.role==='gerant');});
   document.getElementById('modal-role').classList.add('open');
 }
-
-function confirmRole() {
+function confirmRole(){
   const newRole=document.getElementById('role-select').value;
   const u=db.users.find(x=>x.id===roleTargetId);
-  if (u) { logAction('user_role',`Grade changé pour ${u.username} : ${u.role} → ${newRole}`,{userId:roleTargetId,oldRole:u.role,newRole}); u.role=newRole; }
-  closeModal('modal-role'); refreshComptes(); scheduleSave();
+  if(u){logAction('user_role',`Grade changé pour ${u.username} : ${u.role} → ${newRole}`,{userId:roleTargetId,oldRole:u.role,newRole});u.role=newRole;}
+  closeModal('modal-role');refreshComptes();scheduleSave();
 }
-
-// CASIER
-function openCasier(userId,username) {
-  if (!canManageUsers()) return;
+function openCasier(userId,username){
+  if(!canManageUsers())return;
   document.getElementById('casier-title').textContent=`Casier — ${username}`;
   const logs=(db.actionLog||[]).filter(l=>l.authorId===userId||l.author===username);
   const content=document.getElementById('casier-content');
-  if (logs.length===0) {
-    content.innerHTML=`<div class="empty-state">Aucune action enregistrée pour ce compte.</div>`;
-    document.getElementById('modal-casier').classList.add('open');
-    return;
-  }
-  // Summary stats
+  if(logs.length===0){content.innerHTML=`<div class="empty-state">Aucune action enregistrée pour ce compte.</div>`;document.getElementById('modal-casier').classList.add('open');return;}
   const fautesAdded=logs.filter(l=>l.type==='faute_add').length;
   const ninjasAdded=logs.filter(l=>l.type==='ninja_add').length;
   const jugements=logs.filter(l=>l.type==='jugement_create').length;
   const txCount=logs.filter(l=>l.type==='treasury_tx').length;
-  const html=`
+  content.innerHTML=`
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-bottom:1.5rem;padding-bottom:1rem;border-bottom:1px solid var(--parch-edge);">
-      <div style="background:rgba(184,149,90,0.1);border-radius:3px;padding:0.7rem;text-align:center;">
-        <div style="font-family:'Cinzel',serif;font-size:1.3rem;color:var(--red-seal);">${fautesAdded}</div>
-        <div style="font-size:0.68rem;color:var(--ink-fade);font-family:'Cinzel',serif;">Fautes ajoutées</div>
-      </div>
-      <div style="background:rgba(184,149,90,0.1);border-radius:3px;padding:0.7rem;text-align:center;">
-        <div style="font-family:'Cinzel',serif;font-size:1.3rem;color:var(--konoha-green);">${ninjasAdded}</div>
-        <div style="font-size:0.68rem;color:var(--ink-fade);font-family:'Cinzel',serif;">Ninjas ajoutés</div>
-      </div>
-      <div style="background:rgba(184,149,90,0.1);border-radius:3px;padding:0.7rem;text-align:center;">
-        <div style="font-family:'Cinzel',serif;font-size:1.3rem;color:var(--gold);">${jugements}</div>
-        <div style="font-size:0.68rem;color:var(--ink-fade);font-family:'Cinzel',serif;">Jugements</div>
-      </div>
-      <div style="background:rgba(184,149,90,0.1);border-radius:3px;padding:0.7rem;text-align:center;">
-        <div style="font-family:'Cinzel',serif;font-size:1.3rem;color:var(--ink);">${txCount}</div>
-        <div style="font-size:0.68rem;color:var(--ink-fade);font-family:'Cinzel',serif;">Transactions</div>
-      </div>
+      <div style="background:rgba(184,149,90,0.1);border-radius:3px;padding:0.7rem;text-align:center;"><div style="font-family:'Cinzel',serif;font-size:1.3rem;color:var(--red-seal);">${fautesAdded}</div><div style="font-size:0.68rem;color:var(--ink-fade);font-family:'Cinzel',serif;">Fautes ajoutées</div></div>
+      <div style="background:rgba(184,149,90,0.1);border-radius:3px;padding:0.7rem;text-align:center;"><div style="font-family:'Cinzel',serif;font-size:1.3rem;color:var(--konoha-green);">${ninjasAdded}</div><div style="font-size:0.68rem;color:var(--ink-fade);font-family:'Cinzel',serif;">Ninjas ajoutés</div></div>
+      <div style="background:rgba(184,149,90,0.1);border-radius:3px;padding:0.7rem;text-align:center;"><div style="font-family:'Cinzel',serif;font-size:1.3rem;color:var(--gold);">${jugements}</div><div style="font-size:0.68rem;color:var(--ink-fade);font-family:'Cinzel',serif;">Jugements</div></div>
+      <div style="background:rgba(184,149,90,0.1);border-radius:3px;padding:0.7rem;text-align:center;"><div style="font-family:'Cinzel',serif;font-size:1.3rem;color:var(--ink);">${txCount}</div><div style="font-size:0.68rem;color:var(--ink-fade);font-family:'Cinzel',serif;">Transactions</div></div>
     </div>
     <div style="font-family:'Cinzel',serif;font-size:0.72rem;color:var(--ink-fade);letter-spacing:0.1em;margin-bottom:0.8rem;">HISTORIQUE COMPLET (${logs.length} action${logs.length>1?'s':''})</div>
     <div style="max-height:360px;overflow-y:auto;border:1px solid rgba(184,149,90,0.3);border-radius:3px;background:rgba(255,255,255,0.3);">
       ${logs.map(l=>{
-        const icons={faute_add:'⚠',faute_delete:'🗑',ninja_add:'👤',ninja_delete:'✕',jugement_create:'⚖',jugement_clos:'✓',jugement_edit:'✏',jugement_delete:'🗑',treasury_tx:'💰',dette_add:'📜',dette_paye:'✓',user_approve:'✓',user_role:'🔑',default:'•'};
+        const icons={faute_add:'⚠',faute_delete:'🗑',faute_paye_toggle:'💳',ninja_add:'👤',ninja_delete:'✕',jugement_create:'⚖',jugement_clos:'✓',jugement_edit:'✏',jugement_delete:'🗑',treasury_tx:'💰',dette_add:'📜',dette_paye:'✓',user_approve:'✓',user_role:'🔑',default:'•'};
         const icon=icons[l.type]||icons.default;
-        const colors={faute_add:'var(--red-seal)',faute_delete:'var(--red-seal)',ninja_add:'var(--konoha-green)',ninja_delete:'var(--red-seal)',jugement_create:'var(--gold)',jugement_clos:'var(--konoha-green)',jugement_edit:'var(--ink-fade)',treasury_tx:'var(--gold)',dette_add:'var(--ink-fade)',dette_paye:'var(--konoha-green)',user_approve:'var(--konoha-green)',user_role:'var(--gold)',default:'var(--ink-fade)'};
+        const colors={faute_add:'var(--red-seal)',faute_delete:'var(--red-seal)',faute_paye_toggle:'var(--konoha-green)',ninja_add:'var(--konoha-green)',ninja_delete:'var(--red-seal)',jugement_create:'var(--gold)',jugement_clos:'var(--konoha-green)',jugement_edit:'var(--ink-fade)',treasury_tx:'var(--gold)',dette_add:'var(--ink-fade)',dette_paye:'var(--konoha-green)',user_approve:'var(--konoha-green)',user_role:'var(--gold)',default:'var(--ink-fade)'};
         const color=colors[l.type]||colors.default;
-        return`<div class="casier-action">
-          <div class="casier-icon" style="color:${color};">${icon}</div>
-          <div class="casier-detail">${l.description}<div class="casier-meta">${l.date}</div></div>
-        </div>`;
+        return`<div class="casier-action"><div class="casier-icon" style="color:${color};">${icon}</div><div class="casier-detail">${l.description}<div class="casier-meta">${l.date}</div></div></div>`;
       }).join('')}
     </div>`;
-  content.innerHTML=html;
   document.getElementById('modal-casier').classList.add('open');
 }
 
-// MODALS
-function closeModal(id) {
+function closeModal(id){
   document.getElementById(id).classList.remove('open');
-  if (id==='modal-edit-jugement') editJugementId=null;
+  if(id==='modal-edit-jugement')editJugementId=null;
+  if(id==='modal-faute-detail')currentFauteDetailId=null;
 }
 document.querySelectorAll('.modal-overlay').forEach(m=>{
-  m.addEventListener('click',e=>{ if(e.target===m){m.classList.remove('open'); editJugementId=null;} });
+  m.addEventListener('click',e=>{if(e.target===m){m.classList.remove('open');editJugementId=null;currentFauteDetailId=null;}});
 });
-document.getElementById('confirm-paye').addEventListener('click',e=>{
-  if(e.target===document.getElementById('confirm-paye')) closeConfirmPaye();
-});
+document.getElementById('confirm-paye').addEventListener('click',e=>{if(e.target===document.getElementById('confirm-paye'))closeConfirmPaye();});
 
 Object.assign(window,{
   showLogin,showRegister,doLogin,doRegister,doLogout,
   switchPage,previewPhoto,clearPhoto,
   addNinja,deleteNinja,refreshNinjas,
-  addFaute,deleteFaute,openFauteDetail,
+  addFaute,deleteFaute,openFauteDetail,toggleFautePaye,
   openDossier,envoyerJugement,confirmJugement,
   cloturerJugement,ouvrirEditJugement,sauvegarderJugement,
   supprimerJugement,openProfil,
   openTxModal,confirmTx,
-  toggleDetteNinja,addDette,ouvrirConfirmPaye,
-  closeConfirmPaye,confirmerPaye,
-  approveUser,openRoleModal,confirmRole,
-  openCasier,closeModal
+  toggleDetteNinja,addDette,ouvrirConfirmPaye,closeConfirmPaye,confirmerPaye,
+  approveUser,openRoleModal,confirmRole,openCasier,closeModal
 });
 
 loadDB();
