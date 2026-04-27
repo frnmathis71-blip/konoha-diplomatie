@@ -533,11 +533,17 @@ function doRegister(){
   if(p.length<4){showErr(err,'Mot de passe trop court (min 4 car.).');return;}
   if(p!==p2){showErr(err,'Les mots de passe ne correspondent pas.');return;}
   if(db.users.find(x=>x.username===u)){showErr(err,'Identifiant déjà utilisé.');return;}
-  db.users.push({id:'u'+Date.now(),username:u,password:p,role:'observateur',roleRequested,approved:false});
+  // Les observateurs sont approuvés directement ; les autres rôles attendent validation
+  const isObservateur = roleRequested === 'observateur';
+  db.users.push({id:'u'+Date.now(),username:u,password:p,role:'observateur',roleRequested,approved:isObservateur});
   scheduleSave();showLogin();
   const lerr=document.getElementById('login-error');
   lerr.style.cssText='display:block;color:var(--konoha-green);font-style:italic;';
-  lerr.textContent=`Compte créé ! En attente de validation. Rôle demandé : ${ROLES[roleRequested]||roleRequested}.`;
+  if(isObservateur){
+    lerr.textContent='Compte créé ! Vous pouvez vous connecter immédiatement.';
+  } else {
+    lerr.textContent=`Compte créé ! En attente de validation pour le rôle : ${ROLES[roleRequested]||roleRequested}.`;
+  }
 }
 
 function doLogout(){
@@ -715,7 +721,12 @@ function deleteFaute(id){
   const f=db.fautes.find(x=>x.id===id);
   logAction('faute_delete',`Faute supprimée (${f?f.type:'?'})`,{fauteId:id});
   db.fautes=db.fautes.filter(f=>f.id!==id);
-  refreshFautes();refreshNinjas();refreshAlertes();updateBadge();scheduleSave();
+  // Supprimer la dette automatique liée à cette faute si elle existe
+  const detteAvant=db.dettes?db.dettes.length:0;
+  if(db.dettes) db.dettes=db.dettes.filter(d=>d.fauteRef!==id);
+  const detteApres=db.dettes?db.dettes.length:0;
+  if(detteAvant!==detteApres) logAction('dette_delete',`Dette liée à la faute supprimée automatiquement`,{fauteId:id});
+  refreshFautes();refreshNinjas();refreshAlertes();refreshDettes();updateBadge();scheduleSave();
 }
 
 // ─── TOGGLE PAIEMENT FAUTE ────────────────────────────────────
@@ -1198,6 +1209,14 @@ function confirmerPaye(){
   closeConfirmPaye();refreshDettes();updateBadge();scheduleSave();
 }
 
+function deleteUser(id, username){
+  if(currentUser.role!=='admin'){alert('Seul l\'Administrateur peut supprimer un compte.');return;}
+  if(!confirm(`Supprimer définitivement le compte « ${username} » ?\n\nCette action est irréversible.`))return;
+  db.users=db.users.filter(x=>x.id!==id);
+  logAction('user_delete',`Compte supprimé : ${username}`,{userId:id});
+  refreshComptes();scheduleSave();
+}
+
 function refreshComptes(){
   const cont=document.getElementById('comptes-content');
   if(!canManageUsers()){cont.innerHTML=`<div class="access-denied"><div style="font-family:'Cinzel',serif;font-size:1.1rem;">⊗ Accès Restreint</div><p>Seuls l'Administrateur et les Gérants peuvent gérer les comptes diplomatiques.</p></div>`;return;}
@@ -1206,8 +1225,14 @@ function refreshComptes(){
     const isSystemAdmin=u.id==='u0';
     const status=u.approved?`<span style="color:var(--konoha-green);font-size:0.8rem;">✓ Actif</span>`:`<span style="color:var(--red-seal);font-size:0.8rem;">En attente${u.roleRequested?` · demande : <em>${ROLES[u.roleRequested]||u.roleRequested}</em>`:''}</span>`;
     const canEdit=!isSystemAdmin&&!(u.role==='admin'&&currentUser.role==='gerant');
+    const canDelete=currentUser.role==='admin'&&!isSystemAdmin;
     const actions=canEdit
-      ?`<div style="display:flex;gap:6px;flex-wrap:wrap;"><button class="btn btn-ghost btn-sm" onclick="openCasier('${u.id}','${u.username}')">📋 Casier</button><button class="btn btn-ghost btn-sm" onclick="openRoleModal('${u.id}','${u.username}')">Grade</button>${!u.approved?`<button class="btn btn-success btn-sm" onclick="approveUser('${u.id}')">✓ Valider</button>`:''}</div>`
+      ?`<div style="display:flex;gap:6px;flex-wrap:wrap;">
+          <button class="btn btn-ghost btn-sm" onclick="openCasier('${u.id}','${u.username}')">📋 Casier</button>
+          <button class="btn btn-ghost btn-sm" onclick="openRoleModal('${u.id}','${u.username}')">Grade</button>
+          ${!u.approved?`<button class="btn btn-success btn-sm" onclick="approveUser('${u.id}')">✓ Valider</button>`:''}
+          ${canDelete?`<button class="btn btn-danger btn-sm" onclick="deleteUser('${u.id}','${u.username}')">✕ Supprimer</button>`:''}
+        </div>`
       :`<div style="display:flex;gap:6px;"><button class="btn btn-ghost btn-sm" onclick="openCasier('${u.id}','${u.username}')">📋 Casier</button><span style="font-size:0.75rem;color:var(--ink-fade);">Compte protégé</span></div>`;
     html+=`<tr><td>${u.username}</td><td><span class="role-${u.role}">${ROLES[u.role]||u.role}</span></td><td>${status}</td><td>${actions}</td></tr>`;
   });
@@ -1216,7 +1241,12 @@ function refreshComptes(){
 function approveUser(id){
   if(!canManageUsers())return;
   const u=db.users.find(x=>x.id===id);
-  if(u){u.approved=true;logAction('user_approve',`Compte validé : ${u.username}`,{userId:id});}
+  if(u){
+    u.approved=true;
+    // Attribuer le rôle demandé s'il existe, sinon garder observateur
+    if(u.roleRequested && u.roleRequested !== 'observateur') u.role=u.roleRequested;
+    logAction('user_approve',`Compte validé : ${u.username} → ${ROLES[u.role]||u.role}`,{userId:id,role:u.role});
+  }
   refreshComptes();scheduleSave();
 }
 function openRoleModal(id,username){
@@ -1283,7 +1313,7 @@ Object.assign(window,{
   supprimerJugement,openProfil,
   openTxModal,confirmTx,
   toggleDetteNinja,addDette,ouvrirConfirmPaye,closeConfirmPaye,confirmerPaye,
-  approveUser,openRoleModal,confirmRole,openCasier,closeModal
+  approveUser,deleteUser,openRoleModal,confirmRole,openCasier,closeModal
 });
 
 loadDB();
