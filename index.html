@@ -291,6 +291,7 @@
       <div class="treasury-balance"><div class="treasury-label">Solde actuel</div><div class="treasury-amount" id="balance-display">0 Ryō</div></div>
       <div id="treasury-btns"><div class="flex-row" style="margin-bottom:1.5rem;"><button class="btn btn-success" onclick="openTxModal('add')">+ Ajouter des fonds</button><button class="btn btn-danger" onclick="openTxModal('remove')">− Retirer des fonds</button></div><div class="sep"></div></div>
       <div style="font-family:'Cinzel',serif;font-size:0.78rem;color:var(--ink-fade);letter-spacing:0.1em;margin-bottom:1rem;">HISTORIQUE DES TRANSACTIONS</div>
+      <div id="tx-pending-zone" style="display:none;margin-bottom:1.5rem;"></div>
       <div id="tx-list"></div><div id="tx-empty" class="empty-state">Aucune transaction enregistrée.</div>
     </div>
   </div>
@@ -715,6 +716,23 @@ function addFaute(){
   refreshFautes();refreshNinjas();refreshAlertes();refreshDettes();updateBadge();scheduleSave();
 }
 
+function copyFauteResume(fauteId){
+  const f=db.fautes.find(x=>x.id===fauteId);if(!f)return;
+  const ninja=db.ninjas.find(x=>x.id===f.ninjaId);
+  const fauteur=ninja?`${ninja.prenom} ${ninja.nom}`:'Ninja inconnu';
+  const texte=`${fauteur} : ${f.details} : ${f.date}`;
+  navigator.clipboard.writeText(texte).then(()=>{
+    showSaveIndicator('📋 Résumé copié !',false);
+  }).catch(()=>{
+    // Fallback si clipboard API indisponible
+    const ta=document.createElement('textarea');
+    ta.value=texte;ta.style.position='fixed';ta.style.opacity='0';
+    document.body.appendChild(ta);ta.select();
+    document.execCommand('copy');document.body.removeChild(ta);
+    showSaveIndicator('📋 Résumé copié !',false);
+  });
+}
+
 function deleteFaute(id){
   if(!canDeleteFaute())return;
   if(!confirm('Supprimer cette faute des archives ?'))return;
@@ -787,7 +805,10 @@ function openFauteDetail(fauteId){
     </div>
     <div style="margin-top:1rem;padding-top:0.8rem;border-top:1px solid rgba(184,149,90,0.3);font-size:0.75rem;color:var(--ink-light);font-style:italic;display:flex;justify-content:space-between;align-items:center;">
       <span>Enregistré par <strong style="color:var(--ink);">${f.author||'?'}</strong></span>
-      <span>Réf : <code style="font-family:monospace;font-size:0.7rem;">${f.id}</code></span>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <button class="btn btn-ghost btn-sm" onclick="copyFauteResume('${fauteId}')" style="font-size:0.72rem;">📋 Copier le résumé</button>
+        <span>Réf : <code style="font-family:monospace;font-size:0.7rem;">${f.id}</code></span>
+      </div>
     </div>`;
 
   // Zone toggle paiement
@@ -1107,18 +1128,67 @@ function confirmTx(){
   logAction('treasury_tx',`${txMode==='add'?'Ajout':'Retrait'} trésorerie : ${amount} Ryō — ${detail}`,{mode:txMode,amount});
   closeModal('modal-tx');refreshTreasury();scheduleSave();
 }
+function confirmPendingTx(txId){
+  const tx=db.transactions.find(x=>x.id===txId);if(!tx)return;
+  tx.pending=false;
+  db.balance+=tx.mode==='add'?tx.amount:-tx.amount;
+  logAction('treasury_tx',`Transaction confirmée : +${tx.amount.toLocaleString('fr-FR')} Ryō — ${tx.detail}`,{mode:tx.mode,amount:tx.amount});
+  refreshTreasury();scheduleSave();
+}
+function rejectPendingTx(txId){
+  if(!confirm('Rejeter cette transaction ? Elle sera supprimée.'))return;
+  db.transactions=db.transactions.filter(x=>x.id!==txId);
+  logAction('treasury_tx_reject',`Transaction rejetée`,{txId});
+  refreshTreasury();scheduleSave();
+}
+function deleteTx(txId){
+  if(currentUser.role!=='admin'){alert('Seul l\'Administrateur peut supprimer une transaction.');return;}
+  if(!confirm('Supprimer définitivement cette transaction ? Le solde ne sera pas recalculé.'))return;
+  db.transactions=db.transactions.filter(x=>x.id!==txId);
+  logAction('treasury_tx_delete',`Transaction supprimée`,{txId});
+  refreshTreasury();scheduleSave();
+}
+
 function refreshTreasury(){
   document.getElementById('treasury-btns').style.display=canManageTreasury()?'':'none';
   document.getElementById('balance-display').textContent=db.balance.toLocaleString('fr-FR')+' Ryō';
+
+  // Zone transactions en attente
+  const pendingZone=document.getElementById('tx-pending-zone');
+  const pending=(db.transactions||[]).filter(t=>t.pending);
+  if(pending.length>0&&canManageTreasury()){
+    pendingZone.style.display='block';
+    pendingZone.innerHTML=`<div style="font-family:'Cinzel',serif;font-size:0.78rem;color:var(--gold);letter-spacing:0.1em;margin-bottom:0.8rem;">⏳ TRANSACTIONS EN ATTENTE (${pending.length})</div>`
+      +pending.map(tx=>`
+      <div style="background:linear-gradient(135deg,#fffbe6,var(--parch-light));border:1.5px solid var(--gold);border-radius:3px;padding:1rem 1.5rem;margin-bottom:0.8rem;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
+        <div>
+          <div style="font-size:0.88rem;color:var(--ink);">${tx.detail}</div>
+          <div style="font-size:0.72rem;color:var(--ink-light);font-style:italic;">${tx.date} · par ${tx.author}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+          <span style="font-family:'Cinzel',serif;font-size:1.1rem;color:var(--konoha-green);">+${tx.amount.toLocaleString('fr-FR')} Ryō</span>
+          <button class="btn btn-success btn-sm" onclick="confirmPendingTx('${tx.id}')">✓ Confirmer</button>
+          <button class="btn btn-danger btn-sm" onclick="rejectPendingTx('${tx.id}')">✕ Rejeter</button>
+        </div>
+      </div>`).join('');
+    pendingZone.innerHTML+=`<div class="sep"></div>`;
+  } else {
+    pendingZone.style.display='none';
+  }
+
   const list=document.getElementById('tx-list'),empty=document.getElementById('tx-empty');
   list.innerHTML='';
-  if(db.transactions.length===0){empty.style.display='block';return;}
+  const confirmed=(db.transactions||[]).filter(t=>!t.pending);
+  if(confirmed.length===0){empty.style.display='block';return;}
   empty.style.display='none';
-  db.transactions.forEach(tx=>{
+  confirmed.forEach(tx=>{
     const div=document.createElement('div');div.className='tx-row';
     div.innerHTML=`<div class="tx-sign ${tx.mode==='add'?'plus':'minus'}">${tx.mode==='add'?'+':'−'}</div>
       <div class="tx-detail-col"><div>${tx.detail}</div><div class="tx-meta">${tx.date} · par ${tx.author}</div></div>
-      <div class="tx-amount ${tx.mode==='add'?'plus':'minus'}">${tx.mode==='add'?'+':'−'}${tx.amount.toLocaleString('fr-FR')} Ryō</div>`;
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div class="tx-amount ${tx.mode==='add'?'plus':'minus'}">${tx.mode==='add'?'+':'−'}${tx.amount.toLocaleString('fr-FR')} Ryō</div>
+        ${currentUser.role==='admin'?`<button class="btn btn-ghost btn-sm" style="font-size:0.7rem;padding:3px 8px;" onclick="deleteTx('${tx.id}')">✕</button>`:''}
+      </div>`;
     list.appendChild(div);
   });
 }
@@ -1153,6 +1223,14 @@ function addDette(){
   document.getElementById('d-montant').value='';document.getElementById('d-motif').value='';document.getElementById('d-date').value=new Date().toISOString().split('T')[0];
   refreshDettes();updateBadge();scheduleSave();
 }
+function deleteDette(detteId){
+  if(currentUser.role!=='admin'){alert('Seul l\'Administrateur peut supprimer une dette.');return;}
+  if(!confirm('Supprimer définitivement cette dette des archives ?'))return;
+  db.dettes=db.dettes.filter(x=>x.id!==detteId);
+  logAction('dette_delete',`Dette supprimée`,{detteId});
+  refreshDettes();updateBadge();scheduleSave();
+}
+
 function refreshDettes(){
   if(!db.dettes)db.dettes=[];
   const list=document.getElementById('dette-list'),empty=document.getElementById('dette-empty');
@@ -1180,7 +1258,11 @@ function refreshDettes(){
         <div style="font-size:0.83rem;color:var(--ink-fade);font-style:italic;margin-bottom:0.8rem;">${d.motif}</div>
         ${d.fauteRef?`<div style="font-size:0.72rem;font-family:'Cinzel',serif;color:var(--ink-light);margin-bottom:0.8rem;padding:4px 8px;background:rgba(184,149,90,0.12);border-radius:2px;display:inline-block;">📋 Amende liée à la faute — <span style="cursor:pointer;text-decoration:underline;" onclick="openFauteDetail('${d.fauteRef}')">voir le détail</span></div>`:''}
         ${isKonoha?`<div style="margin-bottom:0.8rem;"><div style="display:flex;justify-content:space-between;font-size:0.72rem;color:var(--ink-light);margin-bottom:4px;"><span>Prochaine majoration</span><span style="color:${isUrgent?'var(--red-seal)':isWarning?'var(--gold)':'var(--ink-light)'};">${jours} jour(s)</span></div><div class="progress-bar-wrap"><div class="progress-bar" style="width:${progressPct}%;background:${isUrgent?'var(--red-seal)':isWarning?'var(--gold)':'var(--konoha-green)'};"></div></div></div>`:''}
-        ${canManageDettes()?`<div class="flex-end"><button class="btn btn-success btn-sm" onclick="ouvrirConfirmPaye('${d.id}','${debitorLabel}',${montant})">✓ Marquer comme payée</button></div>`:''}`;
+        ${canManageDettes()?`<div class="flex-end" style="gap:8px;">
+          <button class="btn btn-success btn-sm" onclick="ouvrirConfirmPaye('${d.id}','${debitorLabel}',${montant})">✓ Marquer comme payée</button>
+          ${currentUser.role==='admin'?`<button class="btn btn-ghost btn-sm" onclick="deleteDette('${d.id}')">✕ Supprimer</button>`:''}
+        </div>`
+        :currentUser.role==='admin'?`<div class="flex-end"><button class="btn btn-ghost btn-sm" onclick="deleteDette('${d.id}')">✕ Supprimer</button></div>`:''}`;
       list.appendChild(div);
     });
   }
@@ -1190,7 +1272,8 @@ function refreshDettes(){
     payees.forEach(d=>{
       const debitorLabel=d.debitor==='ninja'?(()=>{const n=db.ninjas.find(x=>x.id===d.ninjaId);return n?`${n.prenom} ${n.nom}`:'Ninja inconnu';})():d.debitor;
       const div=document.createElement('div');div.style.cssText='background:rgba(26,74,26,0.05);border:1px solid rgba(45,107,45,0.3);border-radius:3px;padding:1rem 1.5rem;margin-bottom:0.8rem;opacity:0.75;';
-      div.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;"><div><span style="font-family:'Cinzel',serif;font-size:0.88rem;">${debitorLabel} → ${d.creancier}</span><span style="font-size:0.75rem;color:var(--ink-light);font-style:italic;margin-left:8px;">${d.createdAt}</span></div><span style="font-size:0.72rem;color:var(--konoha-green);font-family:'Cinzel',serif;">✓ Remboursée</span></div>
+      div.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;"><div><span style="font-family:'Cinzel',serif;font-size:0.88rem;">${debitorLabel} → ${d.creancier}</span><span style="font-size:0.75rem;color:var(--ink-light);font-style:italic;margin-left:8px;">${d.createdAt}</span></div>
+        <div style="display:flex;align-items:center;gap:8px;"><span style="font-size:0.72rem;color:var(--konoha-green);font-family:'Cinzel',serif;">✓ Remboursée</span>${currentUser.role==='admin'?`<button class="btn btn-ghost btn-sm" onclick="deleteDette('${d.id}')">✕</button>`:''}</div></div>
         <div style="font-size:0.82rem;color:var(--ink-fade);margin-top:4px;font-style:italic;">${d.motif} · ${d.montantInitial.toLocaleString('fr-FR')} Ryō initial</div>`;
       list.appendChild(div);
     });
@@ -1205,8 +1288,25 @@ function closeConfirmPaye(){dettePayeId=null;document.getElementById('confirm-pa
 function confirmerPaye(){
   if(!db.dettes||!dettePayeId)return;
   const d=db.dettes.find(x=>x.id===dettePayeId);
-  if(d){d.paye=true;logAction('dette_paye',`Dette marquée payée : ${d.debitor} → ${d.creancier}`,{detteId:dettePayeId});}
-  closeConfirmPaye();refreshDettes();updateBadge();scheduleSave();
+  if(d){
+    d.paye=true;
+    logAction('dette_paye',`Dette marquée payée : ${d.debitor} → ${d.creancier}`,{detteId:dettePayeId});
+    // Créer une transaction en attente dans la trésorerie
+    if(!db.transactions) db.transactions=[];
+    const{montant}=calculerMontantActuel(d);
+    const debitorLabel=d.debitor==='ninja'?(()=>{const n=db.ninjas.find(x=>x.id===d.ninjaId);return n?`${n.prenom} ${n.nom}`:' Ninja inconnu';})():d.debitor;
+    db.transactions.unshift({
+      id:'t'+Date.now(),
+      mode:'add',
+      amount:montant,
+      detail:`Remboursement dette : ${debitorLabel} → ${d.creancier} — ${d.motif.substring(0,60)}`,
+      date:new Date().toLocaleDateString('fr-FR'),
+      author:currentUser.username,
+      pending:true,
+      detteRef:dettePayeId
+    });
+  }
+  closeConfirmPaye();refreshDettes();refreshTreasury();updateBadge();scheduleSave();
 }
 
 function deleteUser(id, username){
@@ -1307,12 +1407,13 @@ Object.assign(window,{
   showLogin,showRegister,doLogin,doRegister,doLogout,
   switchPage,previewPhoto,clearPhoto,
   addNinja,deleteNinja,refreshNinjas,
-  addFaute,deleteFaute,openFauteDetail,toggleFautePaye,
+  addFaute,deleteFaute,openFauteDetail,toggleFautePaye,copyFauteResume,
   openDossier,envoyerJugement,confirmJugement,
   cloturerJugement,ouvrirEditJugement,sauvegarderJugement,
   supprimerJugement,openProfil,
   openTxModal,confirmTx,
-  toggleDetteNinja,addDette,ouvrirConfirmPaye,closeConfirmPaye,confirmerPaye,
+  toggleDetteNinja,addDette,ouvrirConfirmPaye,closeConfirmPaye,confirmerPaye,deleteDette,
+  confirmPendingTx,rejectPendingTx,deleteTx,
   approveUser,deleteUser,openRoleModal,confirmRole,openCasier,closeModal
 });
 
