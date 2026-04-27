@@ -188,7 +188,13 @@
       <label>Mot de passe</label><input type="password" id="reg-pass" placeholder="••••••••" />
       <label>Confirmer</label><input type="password" id="reg-pass2" placeholder="••••••••" />
       <div id="reg-error" class="error-msg" style="display:none;"></div>
-      <div style="font-size:0.8rem;color:var(--ink-fade);font-style:italic;margin-bottom:1rem;">Votre compte sera validé par un Administrateur ou Gérant avant activation.</div>
+      <label>Rôle souhaité</label>
+      <select id="reg-role">
+        <option value="diplomate">Diplomate</option>
+        <option value="apprenti">Apprenti Diplomate</option>
+        <option value="observateur">Observateur</option>
+      </select>
+      <div style="font-size:0.8rem;color:var(--ink-fade);font-style:italic;margin-bottom:1rem;">Vous serez placé en <strong>Observateur</strong> jusqu'à validation. Le rôle demandé sera attribué par un Administrateur ou Gérant.</div>
       <button class="btn btn-primary" onclick="doRegister()">Soumettre la demande</button>
       <div class="toggle-link">Déjà un compte ? <a onclick="showLogin()">Se connecter</a></div>
     </div>
@@ -521,16 +527,17 @@ function doRegister(){
   const u=document.getElementById('reg-user').value.trim();
   const p=document.getElementById('reg-pass').value;
   const p2=document.getElementById('reg-pass2').value;
+  const roleRequested=document.getElementById('reg-role').value;
   const err=document.getElementById('reg-error');
   if(!u){showErr(err,'Veuillez saisir un identifiant.');return;}
   if(p.length<4){showErr(err,'Mot de passe trop court (min 4 car.).');return;}
   if(p!==p2){showErr(err,'Les mots de passe ne correspondent pas.');return;}
   if(db.users.find(x=>x.username===u)){showErr(err,'Identifiant déjà utilisé.');return;}
-  db.users.push({id:'u'+Date.now(),username:u,password:p,role:'observateur',approved:false});
+  db.users.push({id:'u'+Date.now(),username:u,password:p,role:'observateur',roleRequested,approved:false});
   scheduleSave();showLogin();
   const lerr=document.getElementById('login-error');
   lerr.style.cssText='display:block;color:var(--konoha-green);font-style:italic;';
-  lerr.textContent="Compte créé ! En attente de validation par l'Administrateur ou un Gérant.";
+  lerr.textContent=`Compte créé ! En attente de validation. Rôle demandé : ${ROLES[roleRequested]||roleRequested}.`;
 }
 
 function doLogout(){
@@ -659,6 +666,9 @@ function countNewFaultsSinceLastJugement(ninjaId){
   }).length;
 }
 
+// Montants des amendes par type de faute
+const FAUTE_MONTANTS = { 'Crime de guerre': 100000, 'Brisé de traité': 50000 };
+
 function addFaute(){
   if(!canAddFaute())return;
   const type=document.querySelector('input[name="faute-type"]:checked')?.value;
@@ -671,9 +681,32 @@ function addFaute(){
   db.fautes.push(faute);
   const ninja=db.ninjas.find(x=>x.id===ninjaId);
   logAction('faute_add',`Faute enregistrée : ${type} — ${ninja?ninja.prenom+' '+ninja.nom:'?'}`,{fauteId:faute.id,ninjaId,type,village,paye});
+
+  // ── Création automatique d'une dette liée à la faute ──
+  if(!db.dettes)db.dettes=[];
+  const montantAmende=FAUTE_MONTANTS[type]||50000;
+  // Le village qui a commis la faute doit payer à l'autre village
+  const creancier=village==='Konoha'?'Suna':'Konoha';
+  const debitorLabel=ninja?`${ninja.prenom} ${ninja.nom} (${village})`:`Village de ${village}`;
+  const dette={
+    id:'d'+Date.now()+'f',
+    debitor: ninja?'ninja':village,
+    ninjaId: ninja?ninjaId:null,
+    creancier,
+    montantInitial:montantAmende,
+    date:new Date().toISOString().split('T')[0],
+    motif:`Amende — ${type} commis par ${ninja?ninja.prenom+' '+ninja.nom:'?'} (${village}) · Réf. faute ${faute.id}`,
+    paye: paye==='oui',
+    fauteRef: faute.id,
+    author:currentUser.username,
+    createdAt:new Date().toLocaleDateString('fr-FR')
+  };
+  db.dettes.push(dette);
+  logAction('dette_add',`Dette automatique (${type}) : ${debitorLabel} → ${creancier} — ${montantAmende.toLocaleString('fr-FR')} Ryō`,{detteId:dette.id,fauteId:faute.id,montant:montantAmende});
+
   document.getElementById('f-details').value='';document.getElementById('f-ninja').value='';
   document.querySelector('input[name="faute-paye"][value="non"]').checked=true;
-  refreshFautes();refreshNinjas();refreshAlertes();updateBadge();scheduleSave();
+  refreshFautes();refreshNinjas();refreshAlertes();refreshDettes();updateBadge();scheduleSave();
 }
 
 function deleteFaute(id){
@@ -691,12 +724,13 @@ function toggleFautePaye(fauteId){
   const f=db.fautes.find(x=>x.id===fauteId);if(!f)return;
   const ancienEtat=f.paye;
   f.paye=(f.paye==='oui')?'non':'oui';
+  // Synchroniser la dette liée si elle existe
+  const detteLinked=(db.dettes||[]).find(d=>d.fauteRef===fauteId);
+  if(detteLinked) detteLinked.paye=(f.paye==='oui');
   logAction('faute_paye_toggle',`État paiement faute modifié : ${ancienEtat} → ${f.paye}`,{fauteId});
   scheduleSave();
-  // Rafraîchir le modal en place
   openFauteDetail(fauteId);
-  // Rafraîchir aussi la liste
-  refreshFautes();refreshNinjas();
+  refreshFautes();refreshNinjas();refreshDettes();updateBadge();
 }
 
 function openFauteDetail(fauteId){
@@ -1133,6 +1167,7 @@ function refreshDettes(){
           <div style="text-align:right;"><div style="font-family:'Cinzel',serif;font-size:1.3rem;color:${isUrgent?'var(--red-seal)':isWarning?'var(--gold)':'var(--ink)'};">${montant.toLocaleString('fr-FR')} Ryō</div>${cycles>0?`<div style="font-size:0.72rem;color:var(--red-seal);font-style:italic;">+${cycles}× majoré 20% (initial: ${d.montantInitial.toLocaleString('fr-FR')} Ryō)</div>`:`<div style="font-size:0.72rem;color:var(--ink-light);font-style:italic;">Montant initial</div>`}</div>
         </div>
         <div style="font-size:0.83rem;color:var(--ink-fade);font-style:italic;margin-bottom:0.8rem;">${d.motif}</div>
+        ${d.fauteRef?`<div style="font-size:0.72rem;font-family:'Cinzel',serif;color:var(--ink-light);margin-bottom:0.8rem;padding:4px 8px;background:rgba(184,149,90,0.12);border-radius:2px;display:inline-block;">📋 Amende liée à la faute — <span style="cursor:pointer;text-decoration:underline;" onclick="openFauteDetail('${d.fauteRef}')">voir le détail</span></div>`:''}
         ${isKonoha?`<div style="margin-bottom:0.8rem;"><div style="display:flex;justify-content:space-between;font-size:0.72rem;color:var(--ink-light);margin-bottom:4px;"><span>Prochaine majoration</span><span style="color:${isUrgent?'var(--red-seal)':isWarning?'var(--gold)':'var(--ink-light)'};">${jours} jour(s)</span></div><div class="progress-bar-wrap"><div class="progress-bar" style="width:${progressPct}%;background:${isUrgent?'var(--red-seal)':isWarning?'var(--gold)':'var(--konoha-green)'};"></div></div></div>`:''}
         ${canManageDettes()?`<div class="flex-end"><button class="btn btn-success btn-sm" onclick="ouvrirConfirmPaye('${d.id}','${debitorLabel}',${montant})">✓ Marquer comme payée</button></div>`:''}`;
       list.appendChild(div);
@@ -1169,7 +1204,7 @@ function refreshComptes(){
   let html=`<table><thead><tr><th>Identifiant</th><th>Grade</th><th>Statut</th><th>Actions</th></tr></thead><tbody>`;
   db.users.forEach(u=>{
     const isSystemAdmin=u.id==='u0';
-    const status=u.approved?`<span style="color:var(--konoha-green);font-size:0.8rem;">✓ Actif</span>`:`<span style="color:var(--red-seal);font-size:0.8rem;">En attente</span>`;
+    const status=u.approved?`<span style="color:var(--konoha-green);font-size:0.8rem;">✓ Actif</span>`:`<span style="color:var(--red-seal);font-size:0.8rem;">En attente${u.roleRequested?` · demande : <em>${ROLES[u.roleRequested]||u.roleRequested}</em>`:''}</span>`;
     const canEdit=!isSystemAdmin&&!(u.role==='admin'&&currentUser.role==='gerant');
     const actions=canEdit
       ?`<div style="display:flex;gap:6px;flex-wrap:wrap;"><button class="btn btn-ghost btn-sm" onclick="openCasier('${u.id}','${u.username}')">📋 Casier</button><button class="btn btn-ghost btn-sm" onclick="openRoleModal('${u.id}','${u.username}')">Grade</button>${!u.approved?`<button class="btn btn-success btn-sm" onclick="approveUser('${u.id}')">✓ Valider</button>`:''}</div>`
