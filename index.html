@@ -284,6 +284,7 @@
           <div><label>Multiplicateur</label><input type="number" id="t-mult" min="1" value="1" placeholder="Ex: 1, 2, 3..." /></div>
           <div class="form-full"><label>Nature de la faute</label><input type="text" id="t-label" placeholder="Ex: Attaque sur lieux diplomatique" /></div>
           <div class="form-full"><label>Notes <span style="font-style:italic;font-size:0.74rem;font-weight:400;">(optionnel)</span></label><input type="text" id="t-note" placeholder="Ex: Valeur x3, jugement, annoncé..." /></div>
+          <div class="form-full"><label>Description interne <span style="font-style:italic;font-size:0.74rem;font-weight:400;">(visible uniquement dans la case traité)</span></label><textarea id="t-description" placeholder="Explication détaillée de la règle, requalification et contexte..."></textarea></div>
         </div>
         <div class="flex-end"><button class="btn btn-primary" onclick="addTraiteRule()">+ Ajouter une règle</button></div>
         <div class="sep"></div>
@@ -411,6 +412,19 @@
   </div>
 </div>
 
+<div class="modal-overlay" id="modal-edit-traite">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeModal('modal-edit-traite')">✕</button>
+    <div class="modal-title">Modifier la règle du traité</div>
+    <label>Catégorie</label><select id="et-type"><option value="Brisé de traité">Brisé de traité</option><option value="Crime de guerre">Crime de guerre</option></select>
+    <label>Nature de la faute</label><input type="text" id="et-label" placeholder="Ex: Attaque sur lieux diplomatique" />
+    <label>Multiplicateur</label><input type="number" id="et-mult" min="1" value="1" />
+    <label>Notes</label><input type="text" id="et-note" placeholder="Ex: Valeur x3, jugement, annoncé..." />
+    <label>Description interne (visible uniquement dans la case traité)</label><textarea id="et-description" placeholder="Explication détaillée de la règle..."></textarea>
+    <div class="flex-end mt-1"><button class="btn btn-ghost" onclick="closeModal('modal-edit-traite')">Annuler</button><button class="btn btn-primary" onclick="saveTraiteRule()">Enregistrer</button></div>
+  </div>
+</div>
+
 <!-- Modal détail faute — avec toggle paiement -->
 <div class="modal-overlay" id="modal-faute-detail">
   <div class="modal-box" style="max-width:580px;">
@@ -492,6 +506,7 @@ let saveTimeout = null;
 let jugementTargetNinjaId = null;
 let dettePayeId = null;
 let editJugementId = null;
+let editTraiteRuleId = null;
 let currentFauteDetailId = null; // ← pour le toggle paiement
 
 const LS_KEY = 'konoha_db_cache_v2';
@@ -505,6 +520,7 @@ async function loadDB(){
     if(!db.dettes)db.dettes=[];
     if(!db.actionLog)db.actionLog=[];
     if(!Array.isArray(db.traiteRules)||db.traiteRules.length===0)db.traiteRules=JSON.parse(JSON.stringify(DEFAULT_TRAITE_RULES));
+    ensureTraiteRuleSchema();
     setDbStatus('cache','Archives locales chargées');
   }
   else setDbStatus('loading','Connexion aux archives...');
@@ -521,6 +537,7 @@ async function fetchRemoteDB(){
       if(!Array.isArray(db.dettes))db.dettes=[];
       if(!Array.isArray(db.actionLog))db.actionLog=[];
       if(!Array.isArray(db.traiteRules)||db.traiteRules.length===0)db.traiteRules=JSON.parse(JSON.stringify(DEFAULT_TRAITE_RULES));
+      ensureTraiteRuleSchema();
       cacheWrite(db);setDbStatus('ok','Firebase connecté ✓');
       if(currentUser)refreshAll();
     }else{
@@ -623,7 +640,7 @@ function canManageTreasury(){return['admin','gerant','diplomate'].includes(curre
 function canManageUsers(){return['admin','gerant'].includes(currentUser?.role);}
 function canManageDettes(){return['admin','gerant','diplomate'].includes(currentUser?.role);}
 function canJugement(){return['admin','gerant'].includes(currentUser?.role);}
-function canManageTraite(){return['admin','gerant','diplomate'].includes(currentUser?.role);}
+function canManageTraite(){return['admin','gerant'].includes(currentUser?.role);}
 
 function switchPage(page){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
@@ -733,6 +750,23 @@ function countNewFaultsSinceLastJugement(ninjaId){
 function getRuleById(ruleId){return(db.traiteRules||[]).find(r=>r.id===ruleId);}
 function getRuleMultiplier(ruleId){const r=getRuleById(ruleId);return Math.max(1,Number(r?.multiplier)||1);}
 function getRuleLabel(ruleId,fallback=''){const r=getRuleById(ruleId);return r?.label||fallback||'Nature non renseignée';}
+function getRuleDescription(ruleId){const r=getRuleById(ruleId);return(r?.description||'').trim();}
+function ruleNeedsJugement(rule){
+  const haystack=`${rule?.note||''} ${rule?.label||''}`.toLowerCase();
+  return haystack.includes('jugement');
+}
+function ensureTraiteRuleSchema(){
+  if(!Array.isArray(db.traiteRules))db.traiteRules=[];
+  db.traiteRules=db.traiteRules.map(r=>({...r,description:(r.description||'').trim()}));
+}
+function hasJugementAlert(ninjaId){
+  const lastJugTs=getLastClosedJugementTimestamp(ninjaId);
+  return (db.fautes||[]).some(f=>{
+    if(f.ninjaId!==ninjaId||!f.requiresJugement)return false;
+    const fTs=parseInt(String(f.id||'').replace('f',''))||0;
+    return fTs>lastJugTs;
+  });
+}
 
 function refreshNatureSelect(){
   const sel=document.getElementById('f-nature');if(!sel)return;
@@ -753,14 +787,43 @@ function addTraiteRule(){
   const type=document.getElementById('t-type').value;
   const label=document.getElementById('t-label').value.trim();
   const note=document.getElementById('t-note').value.trim();
+  const description=document.getElementById('t-description').value.trim();
   const multiplier=Math.max(1,parseInt(document.getElementById('t-mult').value||'1',10));
   if(!label){alert('Ajoutez la nature de la faute.');return;}
-  const rule={id:'r'+Date.now(),type,label,multiplier,note};
+  const rule={id:'r'+Date.now(),type,label,multiplier,note,description};
   if(!Array.isArray(db.traiteRules))db.traiteRules=[];
   db.traiteRules.push(rule);
   logAction('traite_rule_add',`Règle du traité ajoutée : ${type} — ${label}`,{ruleId:rule.id,type,multiplier});
-  document.getElementById('t-label').value='';document.getElementById('t-note').value='';document.getElementById('t-mult').value='1';
+  document.getElementById('t-label').value='';document.getElementById('t-note').value='';document.getElementById('t-description').value='';document.getElementById('t-mult').value='1';
   refreshTraite();refreshNatureSelect();scheduleSave();
+}
+
+function openTraiteRuleEditor(ruleId){
+  if(!canManageTraite())return;
+  const rule=getRuleById(ruleId);if(!rule)return;
+  editTraiteRuleId=ruleId;
+  document.getElementById('et-type').value=rule.type||'Brisé de traité';
+  document.getElementById('et-label').value=rule.label||'';
+  document.getElementById('et-mult').value=Math.max(1,Number(rule.multiplier)||1);
+  document.getElementById('et-note').value=rule.note||'';
+  document.getElementById('et-description').value=rule.description||'';
+  document.getElementById('modal-edit-traite').classList.add('open');
+}
+
+function saveTraiteRule(){
+  if(!canManageTraite()||!editTraiteRuleId)return;
+  const rule=getRuleById(editTraiteRuleId);if(!rule)return;
+  const type=document.getElementById('et-type').value;
+  const label=document.getElementById('et-label').value.trim();
+  const multiplier=Math.max(1,parseInt(document.getElementById('et-mult').value||'1',10));
+  const note=document.getElementById('et-note').value.trim();
+  const description=document.getElementById('et-description').value.trim();
+  if(!label){alert('La nature de la faute est obligatoire.');return;}
+  Object.assign(rule,{type,label,multiplier,note,description});
+  db.fautes=(db.fautes||[]).map(f=>f.natureId===rule.id?{...f,type:rule.type,natureLabel:rule.label,multiplier:rule.multiplier,requiresJugement:ruleNeedsJugement(rule)}:f);
+  logAction('traite_rule_edit',`Règle du traité modifiée : ${type} — ${label}`,{ruleId:rule.id,type,multiplier});
+  closeModal('modal-edit-traite');
+  refreshTraite();refreshNatureSelect();refreshFautes();refreshAlertes();updateBadge();scheduleSave();
 }
 
 function deleteTraiteRule(ruleId){
@@ -773,6 +836,7 @@ function deleteTraiteRule(ruleId){
 }
 
 function refreshTraite(){
+  ensureTraiteRuleSchema();
   const addSection=document.getElementById('traite-add-section');
   if(addSection)addSection.style.display=canManageTraite()?'':'none';
   const list=document.getElementById('traite-list');
@@ -791,7 +855,9 @@ function refreshTraite(){
     subset.forEach(r=>{
       const row=document.createElement('div');
       row.className='rule-card';
-      row.innerHTML=`<div class="rule-head"><div><span class="fault-pill fault-${type==='Crime de guerre'?'Crime':'Brise'}">${r.label}</span> ${r.multiplier>1?`<span class="mult-pill">x${r.multiplier}</span>`:''}</div>${canManageTraite()?`<button class="btn btn-ghost btn-sm" onclick="deleteTraiteRule('${r.id}')">✕</button>`:''}</div><div class="rule-meta">${r.note||'—'}</div>`;
+      if(canManageTraite())row.style.cursor='pointer';
+      if(canManageTraite())row.onclick=()=>openTraiteRuleEditor(r.id);
+      row.innerHTML=`<div class="rule-head"><div><span class="fault-pill fault-${type==='Crime de guerre'?'Crime':'Brise'}">${r.label}</span> ${r.multiplier>1?`<span class="mult-pill">x${r.multiplier}</span>`:''}</div>${canManageTraite()?`<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();deleteTraiteRule('${r.id}')">✕</button>`:''}</div><div class="rule-meta">${r.note||'—'}</div>${r.description?`<div style="margin-top:0.55rem;font-size:0.8rem;color:var(--ink-light);line-height:1.45;font-style:italic;">${r.description}</div>`:''}`;
       block.appendChild(row);
     });
     list.appendChild(block);
@@ -805,14 +871,17 @@ function addFaute(){
   const natureId=document.getElementById('f-nature').value;
   const natureLabel=getRuleLabel(natureId);
   const multiplier=getRuleMultiplier(natureId);
+  const natureRule=getRuleById(natureId);
   const ninjaId=document.getElementById('f-ninja').value;
   const details=document.getElementById('f-details').value.trim();
   const paye=document.querySelector('input[name="faute-paye"]:checked')?.value||'non';
   if(!ninjaId||!natureId||!details){alert('Sélectionnez un ninja, une nature et ajoutez des détails.');return;}
-  const faute={id:'f'+Date.now(),type,village,ninjaId,natureId,natureLabel,multiplier,details,paye,date:new Date().toLocaleDateString('fr-FR'),author:currentUser.username,authorId:currentUser.id};
+  const requiresJugement=ruleNeedsJugement(natureRule);
+  const faute={id:'f'+Date.now(),type,village,ninjaId,natureId,natureLabel,multiplier,details,paye,requiresJugement,date:new Date().toLocaleDateString('fr-FR'),author:currentUser.username,authorId:currentUser.id};
   db.fautes.push(faute);
   const ninja=db.ninjas.find(x=>x.id===ninjaId);
   logAction('faute_add',`Faute enregistrée : ${type} / ${natureLabel} — ${ninja?ninja.prenom+' '+ninja.nom:'?'}`,{fauteId:faute.id,ninjaId,type,natureId,village,paye,multiplier});
+  if(requiresJugement)logAction('jugement_alert',`Alerte jugement automatique : ${ninja?ninja.prenom+' '+ninja.nom:'?'}`,{fauteId:faute.id,ninjaId,natureLabel});
 
   // ── Création automatique d'une dette liée à la faute ──
   if(!db.dettes)db.dettes=[];
@@ -991,7 +1060,7 @@ function updateBadge(){
   const alerte=db.ninjas.filter(n=>{
     const enJug=(db.jugements||[]).some(j=>j.ninjaId===n.id&&j.statut==='en_attente');
     if(enJug)return false;
-    return countNewFaultsSinceLastJugement(n.id)>=3;
+    return countNewFaultsSinceLastJugement(n.id)>=3||hasJugementAlert(n.id);
   }).length;
   const badge=document.getElementById('alert-badge');
   badge.style.display=alerte>0?'flex':'none';badge.textContent=alerte;
@@ -1015,13 +1084,14 @@ function refreshAlertes(){
   const flagged=db.ninjas.filter(n=>{
     const enJug=(db.jugements||[]).some(j=>j.ninjaId===n.id&&j.statut==='en_attente');
     if(enJug)return false;
-    return countNewFaultsSinceLastJugement(n.id)>=3;
+    return countNewFaultsSinceLastJugement(n.id)>=3||hasJugementAlert(n.id);
   });
   list.innerHTML='';
   if(flagged.length===0){empty.style.display='block';return;}
   empty.style.display='none';
   flagged.forEach(n=>{
     const newFaults=countNewFaultsSinceLastJugement(n.id);
+    const urgentJugement=hasJugementAlert(n.id);
     const totalFaults=db.fautes.filter(f=>f.ninjaId===n.id).length;
     const avatar=n.photo
       ?`<img src="${n.photo}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;border:1.5px solid var(--red-seal);" />`
@@ -1030,7 +1100,7 @@ function refreshAlertes(){
     div.innerHTML=`<div style="display:flex;align-items:center;gap:12px;">${avatar}
       <div>
         <div style="font-family:'Cinzel',serif;font-size:1rem;">${n.prenom} ${n.nom}</div>
-        <div style="font-size:0.82rem;color:var(--red-seal);font-style:italic;">${newFaults} nouvelle(s) faute(s) depuis dernier jugement · ${totalFaults} au total — <span class="village-badge village-${n.village}">${n.village}</span></div>
+        <div style="font-size:0.82rem;color:var(--red-seal);font-style:italic;">${newFaults} nouvelle(s) faute(s) depuis dernier jugement · ${totalFaults} au total — <span class="village-badge village-${n.village}">${n.village}</span>${urgentJugement?` · ⚖ Jugement requis`:''}</div>
       </div></div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
         <button class="btn btn-ghost btn-sm" onclick="openDossier('${n.id}')">📋 Dossier</button>
@@ -1529,10 +1599,11 @@ function openCasier(userId,username){
 function closeModal(id){
   document.getElementById(id).classList.remove('open');
   if(id==='modal-edit-jugement')editJugementId=null;
+  if(id==='modal-edit-traite')editTraiteRuleId=null;
   if(id==='modal-faute-detail')currentFauteDetailId=null;
 }
 document.querySelectorAll('.modal-overlay').forEach(m=>{
-  m.addEventListener('click',e=>{if(e.target===m){m.classList.remove('open');editJugementId=null;currentFauteDetailId=null;}});
+  m.addEventListener('click',e=>{if(e.target===m){m.classList.remove('open');editJugementId=null;editTraiteRuleId=null;currentFauteDetailId=null;}});
 });
 document.getElementById('confirm-paye').addEventListener('click',e=>{if(e.target===document.getElementById('confirm-paye'))closeConfirmPaye();});
 document.querySelectorAll('input[name="faute-type"]').forEach(r=>r.addEventListener('change',refreshNatureSelect));
@@ -1542,7 +1613,7 @@ Object.assign(window,{
   switchPage,previewPhoto,clearPhoto,
   addNinja,deleteNinja,refreshNinjas,
   addFaute,deleteFaute,openFauteDetail,toggleFautePaye,copyFauteResume,
-  addTraiteRule,deleteTraiteRule,
+  addTraiteRule,deleteTraiteRule,saveTraiteRule,
   openDossier,envoyerJugement,confirmJugement,
   cloturerJugement,ouvrirEditJugement,sauvegarderJugement,
   supprimerJugement,openProfil,
