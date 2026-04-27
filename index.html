@@ -586,13 +586,19 @@ function doLogin(){
   const err=document.getElementById('login-error');
   const user=db.users.find(x=>x.username===u&&x.password===p);
   if(!user){showErr(err,'Identifiant ou mot de passe incorrect.');return;}
-  if(!user.approved){showErr(err,'Votre compte est en attente de validation.');return;}
-  err.style.display='none';currentUser=user;
+  const effectiveRole=user.approved?user.role:'observateur';
+  currentUser={...user,role:effectiveRole};
+  err.style.display='none';
   document.getElementById('login-screen').style.display='none';
   document.getElementById('app').style.cssText='display:flex;flex-direction:column;min-height:100vh;';
   document.getElementById('user-display').textContent=user.username;
-  document.getElementById('role-display').textContent=ROLES[user.role]||user.role;
+  document.getElementById('role-display').textContent=!user.approved
+    ? `${ROLES[effectiveRole]||effectiveRole} · validation en attente`
+    : (ROLES[user.role]||user.role);
   document.getElementById('d-date').value=new Date().toISOString().split('T')[0];
+  if(!user.approved){
+    showSaveIndicator('Compte en attente : accès en lecture seule (Observateur)',false);
+  }
   switchPage('ninjas');refreshAll();
 }
 
@@ -615,7 +621,7 @@ function doRegister(){
   if(isObservateur){
     lerr.textContent='Compte créé ! Vous pouvez vous connecter immédiatement.';
   } else {
-    lerr.textContent=`Compte créé ! En attente de validation pour le rôle : ${ROLES[roleRequested]||roleRequested}.`;
+    lerr.textContent=`Compte créé ! Vous pouvez vous connecter en Observateur pendant la validation du rôle : ${ROLES[roleRequested]||roleRequested}.`;
   }
 }
 
