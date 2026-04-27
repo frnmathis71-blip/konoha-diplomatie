@@ -163,6 +163,10 @@
   .paye-toggle-btn.non:hover{background:#fbd0d0;}
   .paye-toggle-btn.oui{background:#e8f5e8;color:var(--konoha-green);border-color:var(--konoha-green);}
   .paye-toggle-btn.oui:hover{background:#d0edd0;}
+  .rule-card{border:1px solid rgba(184,149,90,0.45);border-radius:3px;padding:0.9rem 1rem;margin-bottom:0.7rem;background:rgba(255,255,255,0.32);}
+  .rule-head{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap;}
+  .rule-meta{font-size:0.75rem;color:var(--ink-light);font-style:italic;margin-top:0.35rem;}
+  .mult-pill{display:inline-block;padding:2px 8px;border-radius:2px;font-size:0.72rem;font-family:'Cinzel',serif;border:1px solid var(--red-seal);color:var(--red-seal);background:#fde8e8;}
 </style>
 </head>
 <body>
@@ -207,6 +211,7 @@
     <div class="nav-links">
       <button class="nav-btn active" id="nav-ninjas" onclick="switchPage('ninjas')">Ninjas</button>
       <button class="nav-btn" id="nav-fautes" onclick="switchPage('fautes')">Fautes</button>
+      <button class="nav-btn" id="nav-traite" onclick="switchPage('traite')">Traité</button>
       <button class="nav-btn" id="nav-alertes" onclick="switchPage('alertes')">Alertes<span class="alert-badge" id="alert-badge" style="display:none;">0</span></button>
       <button class="nav-btn" id="nav-jugements" onclick="switchPage('jugements')">Jugements<span class="alert-badge" id="jugement-badge" style="display:none;background:#5c3d1e;">0</span></button>
       <button class="nav-btn" id="nav-tresorerie" onclick="switchPage('tresorerie')">Trésorerie</button>
@@ -256,16 +261,35 @@
       <div id="faute-add-section">
         <div class="form-grid">
           <div><label>Type de faute</label><div class="check-group"><label class="check-item"><input type="radio" name="faute-type" value="Brisé de traité" checked /><span class="check-label">Brisé de traité</span></label><label class="check-item"><input type="radio" name="faute-type" value="Crime de guerre" /><span class="check-label">Crime de guerre</span></label></div></div>
+          <div><label>Nature de la faute (règle du traité)</label><select id="f-nature"><option value="">— Sélectionner une nature —</option></select></div>
           <div><label>Village concerné</label><div class="check-group"><label class="check-item"><input type="radio" name="faute-village" value="Konoha" checked /><span class="check-label">Konoha</span></label><label class="check-item"><input type="radio" name="faute-village" value="Suna" /><span class="check-label">Suna</span></label></div></div>
           <div><label>Ninja responsable</label><select id="f-ninja"><option value="">— Sélectionner un ninja —</option></select></div>
           <div><label>Amende / Réparation payée ?</label><div class="check-group"><label class="check-item"><input type="radio" name="faute-paye" value="non" checked /><span class="check-label" style="color:var(--red-seal);">Non payée</span></label><label class="check-item"><input type="radio" name="faute-paye" value="oui" /><span class="check-label" style="color:var(--konoha-green);">Payée / Acquittée</span></label></div></div>
-          <div class="form-full"><label>Détails de l'incident</label><textarea id="f-details" placeholder="Décrivez les circonstances, preuves et témoignages..."></textarea></div>
+          <div class="form-full"><label>Détails de l'incident (témoins, preuves, contexte...)</label><textarea id="f-details" placeholder="Ex: Témoins: ... / Preuves: ... / Contexte: ..."></textarea></div>
         </div>
         <div class="flex-end"><button class="btn btn-danger" onclick="addFaute()">⚠ Enregistrer la Faute</button></div>
         <div class="sep"></div>
       </div>
       <div class="scroll-table"><table><thead><tr><th>Date</th><th>Type</th><th>Ninja</th><th>Village</th><th>Payée</th><th>Ajoutée par</th><th>Aperçu</th><th></th></tr></thead><tbody id="faute-tbody"></tbody></table></div>
       <div id="faute-empty" class="empty-state">Aucune faute enregistrée. La paix règne.</div>
+    </div>
+  </div>
+
+  <div id="page-traite" class="page">
+    <div class="parchment">
+      <div class="parchment-title"><span class="kana">条約</span> Traité Diplomatique — Règles des Fautes</div>
+      <div id="traite-add-section">
+        <div class="form-grid">
+          <div><label>Catégorie</label><select id="t-type"><option value="Brisé de traité">Brisé de traité</option><option value="Crime de guerre">Crime de guerre</option></select></div>
+          <div><label>Multiplicateur</label><input type="number" id="t-mult" min="1" value="1" placeholder="Ex: 1, 2, 3..." /></div>
+          <div class="form-full"><label>Nature de la faute</label><input type="text" id="t-label" placeholder="Ex: Attaque sur lieux diplomatique" /></div>
+          <div class="form-full"><label>Notes <span style="font-style:italic;font-size:0.74rem;font-weight:400;">(optionnel)</span></label><input type="text" id="t-note" placeholder="Ex: Valeur x3, jugement, annoncé..." /></div>
+        </div>
+        <div class="flex-end"><button class="btn btn-primary" onclick="addTraiteRule()">+ Ajouter une règle</button></div>
+        <div class="sep"></div>
+      </div>
+      <div id="traite-list"></div>
+      <div id="traite-empty" class="empty-state">Aucune règle de traité enregistrée.</div>
     </div>
   </div>
 
@@ -433,7 +457,31 @@ const fbApp = initializeApp(firebaseConfig);
 const firebaseDb = getFirestore(fbApp);
 
 const ROLES = { admin:'Administrateur', gerant:'Gérant Diplomatique', diplomate:'Diplomate', apprenti:'Apprenti Diplomate', observateur:'Observateur' };
-const DEFAULT_DB = { users:[{id:'u0',username:'admin',password:'admin123',role:'admin',approved:true}], ninjas:[], fautes:[], jugements:[], transactions:[], balance:0, dettes:[], actionLog:[] };
+const BASE_FAUTE_MONTANTS = { 'Crime de guerre': 100000, 'Brisé de traité': 50000 };
+const DEFAULT_TRAITE_RULES = [
+  {id:'r1',type:'Crime de guerre',label:'Expérience sur un ninja',multiplier:1,note:''},
+  {id:'r2',type:'Crime de guerre',label:'Utilisation de technique à l’encontre d’un prisonnier',multiplier:1,note:'Sceaux'},
+  {id:'r3',type:'Crime de guerre',label:'Attaque sur civil ou village',multiplier:1,note:''},
+  {id:'r4',type:'Crime de guerre',label:'Prisonnier non libéré avant période de guerre',multiplier:1,note:''},
+  {id:'r5',type:'Crime de guerre',label:'Non-respect de l’immunité diplomatique',multiplier:1,note:'Laisser-passer en règle'},
+  {id:'r6',type:'Crime de guerre',label:'Attaque sur lieux diplomatique',multiplier:3,note:'Valeur x3'},
+  {id:'r7',type:'Crime de guerre',label:'Attaque sur une escouade diplomatique',multiplier:1,note:'Si annoncée'},
+  {id:'r8',type:'Crime de guerre',label:'Mutilation de dojutsu',multiplier:1,note:'Jugement'},
+  {id:'r9',type:'Crime de guerre',label:'Vol d’artefact',multiplier:1,note:'Jugement'},
+  {id:'r10',type:'Crime de guerre',label:'Meurtre',multiplier:1,note:'Selon le contexte diplomatique'},
+  {id:'r11',type:'Brisé de traité',label:'Insulte ou menace durant une diplomatie',multiplier:1,note:''},
+  {id:'r12',type:'Brisé de traité',label:'Refus des droits fondamentaux humain',multiplier:1,note:''},
+  {id:'r13',type:'Brisé de traité',label:'Refus de négociation d’un ninja durant une diplomatie',multiplier:1,note:''},
+  {id:'r14',type:'Brisé de traité',label:'Mensonge sur l’identité ou le grade',multiplier:1,note:'En cellule uniquement'},
+  {id:'r15',type:'Brisé de traité',label:'Refus de négociation du drapeau',multiplier:1,note:''},
+  {id:'r16',type:'Brisé de traité',label:'Prise de parole d’un prisonnier ou tiers sans autorisation',multiplier:1,note:''},
+  {id:'r17',type:'Brisé de traité',label:'Mensonge d’un intervenant diplomatique',multiplier:1,note:''},
+  {id:'r18',type:'Brisé de traité',label:'Tentative d’évasion dans le village ou durant une diplomatie',multiplier:1,note:''},
+  {id:'r19',type:'Brisé de traité',label:'Torture sur prisonnier',multiplier:1,note:'Sauf s’il manque de respect'},
+  {id:'r20',type:'Brisé de traité',label:'Non respect des escouades conforme',multiplier:1,note:''},
+  {id:'r21',type:'Brisé de traité',label:'Capture d’un genin confirmé ou inférieur',multiplier:1,note:''}
+];
+const DEFAULT_DB = { users:[{id:'u0',username:'admin',password:'admin123',role:'admin',approved:true}], ninjas:[], fautes:[], jugements:[], transactions:[], balance:0, dettes:[], actionLog:[], traiteRules:JSON.parse(JSON.stringify(DEFAULT_TRAITE_RULES)) };
 
 let db = JSON.parse(JSON.stringify(DEFAULT_DB));
 let currentUser = null;
@@ -452,7 +500,13 @@ function cacheWrite(d){try{localStorage.setItem(LS_KEY,JSON.stringify(d));}catch
 
 async function loadDB(){
   const cached=cacheRead();
-  if(cached&&cached.users){db=cached;if(!db.dettes)db.dettes=[];if(!db.actionLog)db.actionLog=[];setDbStatus('cache','Archives locales chargées');}
+  if(cached&&cached.users){
+    db=cached;
+    if(!db.dettes)db.dettes=[];
+    if(!db.actionLog)db.actionLog=[];
+    if(!Array.isArray(db.traiteRules)||db.traiteRules.length===0)db.traiteRules=JSON.parse(JSON.stringify(DEFAULT_TRAITE_RULES));
+    setDbStatus('cache','Archives locales chargées');
+  }
   else setDbStatus('loading','Connexion aux archives...');
   fetchRemoteDB();
 }
@@ -466,6 +520,7 @@ async function fetchRemoteDB(){
       if(!Array.isArray(db.jugements))db.jugements=[];
       if(!Array.isArray(db.dettes))db.dettes=[];
       if(!Array.isArray(db.actionLog))db.actionLog=[];
+      if(!Array.isArray(db.traiteRules)||db.traiteRules.length===0)db.traiteRules=JSON.parse(JSON.stringify(DEFAULT_TRAITE_RULES));
       cacheWrite(db);setDbStatus('ok','Firebase connecté ✓');
       if(currentUser)refreshAll();
     }else{
@@ -568,6 +623,7 @@ function canManageTreasury(){return['admin','gerant','diplomate'].includes(curre
 function canManageUsers(){return['admin','gerant'].includes(currentUser?.role);}
 function canManageDettes(){return['admin','gerant','diplomate'].includes(currentUser?.role);}
 function canJugement(){return['admin','gerant'].includes(currentUser?.role);}
+function canManageTraite(){return['admin','gerant','diplomate'].includes(currentUser?.role);}
 
 function switchPage(page){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
@@ -575,7 +631,8 @@ function switchPage(page){
   document.getElementById('page-'+page).classList.add('active');
   document.getElementById('nav-'+page).classList.add('active');
   if(page==='ninjas')refreshNinjas();
-  if(page==='fautes'){refreshNinjaSelect();refreshFautes();}
+  if(page==='fautes'){refreshNinjaSelect();refreshNatureSelect();refreshFautes();}
+  if(page==='traite')refreshTraite();
   if(page==='alertes'){refreshAlertes();clearBadge('alert-badge');}
   if(page==='jugements'){refreshJugements();clearBadge('jugement-badge');}
   if(page==='tresorerie')refreshTreasury();
@@ -584,7 +641,7 @@ function switchPage(page){
 }
 
 function refreshAll(){
-  refreshNinjas();refreshNinjaSelect();refreshFautes();
+  refreshNinjas();refreshNinjaSelect();refreshNatureSelect();refreshFautes();refreshTraite();
   refreshAlertes();refreshJugements();refreshTreasury();
   refreshDettes();refreshComptes();updateBadge();
 }
@@ -673,25 +730,93 @@ function countNewFaultsSinceLastJugement(ninjaId){
   }).length;
 }
 
-// Montants des amendes par type de faute
-const FAUTE_MONTANTS = { 'Crime de guerre': 100000, 'Brisé de traité': 50000 };
+function getRuleById(ruleId){return(db.traiteRules||[]).find(r=>r.id===ruleId);}
+function getRuleMultiplier(ruleId){const r=getRuleById(ruleId);return Math.max(1,Number(r?.multiplier)||1);}
+function getRuleLabel(ruleId,fallback=''){const r=getRuleById(ruleId);return r?.label||fallback||'Nature non renseignée';}
+
+function refreshNatureSelect(){
+  const sel=document.getElementById('f-nature');if(!sel)return;
+  const type=document.querySelector('input[name="faute-type"]:checked')?.value||'Brisé de traité';
+  const current=sel.value;
+  sel.innerHTML='<option value="">— Sélectionner une nature —</option>';
+  (db.traiteRules||[]).filter(r=>r.type===type).forEach(r=>{
+    const opt=document.createElement('option');
+    opt.value=r.id;
+    opt.textContent=`${r.label}${r.multiplier>1?` (x${r.multiplier})`:''}${r.note?` — ${r.note}`:''}`;
+    if(r.id===current)opt.selected=true;
+    sel.appendChild(opt);
+  });
+}
+
+function addTraiteRule(){
+  if(!canManageTraite())return;
+  const type=document.getElementById('t-type').value;
+  const label=document.getElementById('t-label').value.trim();
+  const note=document.getElementById('t-note').value.trim();
+  const multiplier=Math.max(1,parseInt(document.getElementById('t-mult').value||'1',10));
+  if(!label){alert('Ajoutez la nature de la faute.');return;}
+  const rule={id:'r'+Date.now(),type,label,multiplier,note};
+  if(!Array.isArray(db.traiteRules))db.traiteRules=[];
+  db.traiteRules.push(rule);
+  logAction('traite_rule_add',`Règle du traité ajoutée : ${type} — ${label}`,{ruleId:rule.id,type,multiplier});
+  document.getElementById('t-label').value='';document.getElementById('t-note').value='';document.getElementById('t-mult').value='1';
+  refreshTraite();refreshNatureSelect();scheduleSave();
+}
+
+function deleteTraiteRule(ruleId){
+  if(!canManageTraite())return;
+  if(!confirm('Supprimer cette règle du traité ?'))return;
+  const rule=getRuleById(ruleId);
+  db.traiteRules=(db.traiteRules||[]).filter(r=>r.id!==ruleId);
+  logAction('traite_rule_delete',`Règle du traité supprimée : ${rule?.label||ruleId}`,{ruleId});
+  refreshTraite();refreshNatureSelect();scheduleSave();
+}
+
+function refreshTraite(){
+  const addSection=document.getElementById('traite-add-section');
+  if(addSection)addSection.style.display=canManageTraite()?'':'none';
+  const list=document.getElementById('traite-list');
+  const empty=document.getElementById('traite-empty');
+  if(!list||!empty)return;
+  list.innerHTML='';
+  const rules=(db.traiteRules||[]);
+  if(rules.length===0){empty.style.display='block';return;}
+  empty.style.display='none';
+  ['Crime de guerre','Brisé de traité'].forEach(type=>{
+    const subset=rules.filter(r=>r.type===type);
+    if(subset.length===0)return;
+    const block=document.createElement('div');
+    block.style.marginBottom='1.2rem';
+    block.innerHTML=`<div style="font-family:'Cinzel',serif;font-size:0.86rem;letter-spacing:0.08em;color:var(--ink-fade);margin-bottom:0.6rem;">${type.toUpperCase()}</div>`;
+    subset.forEach(r=>{
+      const row=document.createElement('div');
+      row.className='rule-card';
+      row.innerHTML=`<div class="rule-head"><div><span class="fault-pill fault-${type==='Crime de guerre'?'Crime':'Brise'}">${r.label}</span> ${r.multiplier>1?`<span class="mult-pill">x${r.multiplier}</span>`:''}</div>${canManageTraite()?`<button class="btn btn-ghost btn-sm" onclick="deleteTraiteRule('${r.id}')">✕</button>`:''}</div><div class="rule-meta">${r.note||'—'}</div>`;
+      block.appendChild(row);
+    });
+    list.appendChild(block);
+  });
+}
 
 function addFaute(){
   if(!canAddFaute())return;
   const type=document.querySelector('input[name="faute-type"]:checked')?.value;
   const village=document.querySelector('input[name="faute-village"]:checked')?.value;
+  const natureId=document.getElementById('f-nature').value;
+  const natureLabel=getRuleLabel(natureId);
+  const multiplier=getRuleMultiplier(natureId);
   const ninjaId=document.getElementById('f-ninja').value;
   const details=document.getElementById('f-details').value.trim();
   const paye=document.querySelector('input[name="faute-paye"]:checked')?.value||'non';
-  if(!ninjaId||!details){alert('Sélectionnez un ninja et ajoutez des détails.');return;}
-  const faute={id:'f'+Date.now(),type,village,ninjaId,details,paye,date:new Date().toLocaleDateString('fr-FR'),author:currentUser.username,authorId:currentUser.id};
+  if(!ninjaId||!natureId||!details){alert('Sélectionnez un ninja, une nature et ajoutez des détails.');return;}
+  const faute={id:'f'+Date.now(),type,village,ninjaId,natureId,natureLabel,multiplier,details,paye,date:new Date().toLocaleDateString('fr-FR'),author:currentUser.username,authorId:currentUser.id};
   db.fautes.push(faute);
   const ninja=db.ninjas.find(x=>x.id===ninjaId);
-  logAction('faute_add',`Faute enregistrée : ${type} — ${ninja?ninja.prenom+' '+ninja.nom:'?'}`,{fauteId:faute.id,ninjaId,type,village,paye});
+  logAction('faute_add',`Faute enregistrée : ${type} / ${natureLabel} — ${ninja?ninja.prenom+' '+ninja.nom:'?'}`,{fauteId:faute.id,ninjaId,type,natureId,village,paye,multiplier});
 
   // ── Création automatique d'une dette liée à la faute ──
   if(!db.dettes)db.dettes=[];
-  const montantAmende=FAUTE_MONTANTS[type]||50000;
+  const montantAmende=(BASE_FAUTE_MONTANTS[type]||50000)*multiplier;
   // Le village qui a commis la faute doit payer à l'autre village
   const creancier=village==='Konoha'?'Suna':'Konoha';
   const debitorLabel=ninja?`${ninja.prenom} ${ninja.nom} (${village})`:`Village de ${village}`;
@@ -702,7 +827,7 @@ function addFaute(){
     creancier,
     montantInitial:montantAmende,
     date:new Date().toISOString().split('T')[0],
-    motif:`Amende — ${type} commis par ${ninja?ninja.prenom+' '+ninja.nom:'?'} (${village}) · Réf. faute ${faute.id}`,
+    motif:`Amende — ${type} / ${natureLabel}${multiplier>1?` x${multiplier}`:''} commis par ${ninja?ninja.prenom+' '+ninja.nom:'?'} (${village}) · Réf. faute ${faute.id}`,
     paye: paye==='oui',
     fauteRef: faute.id,
     author:currentUser.username,
@@ -711,7 +836,7 @@ function addFaute(){
   db.dettes.push(dette);
   logAction('dette_add',`Dette automatique (${type}) : ${debitorLabel} → ${creancier} — ${montantAmende.toLocaleString('fr-FR')} Ryō`,{detteId:dette.id,fauteId:faute.id,montant:montantAmende});
 
-  document.getElementById('f-details').value='';document.getElementById('f-ninja').value='';
+  document.getElementById('f-details').value='';document.getElementById('f-ninja').value='';document.getElementById('f-nature').value='';
   document.querySelector('input[name="faute-paye"][value="non"]').checked=true;
   refreshFautes();refreshNinjas();refreshAlertes();refreshDettes();updateBadge();scheduleSave();
 }
@@ -720,7 +845,8 @@ function copyFauteResume(fauteId){
   const f=db.fautes.find(x=>x.id===fauteId);if(!f)return;
   const ninja=db.ninjas.find(x=>x.id===f.ninjaId);
   const fauteur=ninja?`${ninja.prenom} ${ninja.nom}`:'Ninja inconnu';
-  const texte=`${fauteur} : ${f.details} : ${f.date}`;
+  const nature=f.natureLabel||getRuleLabel(f.natureId,f.details);
+  const texte=`${fauteur} : ${nature} : ${f.date}`;
   navigator.clipboard.writeText(texte).then(()=>{
     showSaveIndicator('📋 Résumé copié !',false);
   }).catch(()=>{
@@ -768,6 +894,8 @@ function openFauteDetail(fauteId){
   const ninja=db.ninjas.find(x=>x.id===f.ninjaId);
   const ninjaName=ninja?`${ninja.prenom} ${ninja.nom}`:'Ninja inconnu';
   const typeKey=f.type==='Crime de guerre'?'Crime':'Brise';
+  const nature=f.natureLabel||getRuleLabel(f.natureId,'Nature non renseignée');
+  const mult=Math.max(1,Number(f.multiplier)||getRuleMultiplier(f.natureId));
   const payeLabel=f.paye==='oui'?'✓ Payée / Acquittée':'✗ Non payée';
   const payeColor=f.paye==='oui'?'var(--konoha-green)':'var(--red-seal)';
   const avatar=ninja?.photo
@@ -785,6 +913,10 @@ function openFauteDetail(fauteId){
       <div style="background:rgba(184,149,90,0.1);border:1px solid rgba(184,149,90,0.4);border-radius:3px;padding:0.8rem;">
         <div style="font-family:'Cinzel',serif;font-size:0.68rem;color:var(--ink-fade);letter-spacing:0.08em;margin-bottom:4px;">TYPE D'INFRACTION</div>
         <span class="fault-pill fault-${typeKey}">${f.type}</span>
+      </div>
+      <div style="background:rgba(184,149,90,0.1);border:1px solid rgba(184,149,90,0.4);border-radius:3px;padding:0.8rem;">
+        <div style="font-family:'Cinzel',serif;font-size:0.68rem;color:var(--ink-fade);letter-spacing:0.08em;margin-bottom:4px;">NATURE DE LA FAUTE</div>
+        <div style="font-size:0.9rem;color:var(--ink);">${nature} ${mult>1?`<span class="mult-pill">x${mult}</span>`:''}</div>
       </div>
       <div style="background:rgba(184,149,90,0.1);border:1px solid rgba(184,149,90,0.4);border-radius:3px;padding:0.8rem;">
         <div style="font-family:'Cinzel',serif;font-size:0.68rem;color:var(--ink-fade);letter-spacing:0.08em;margin-bottom:4px;">VILLAGE CONCERNÉ</div>
@@ -839,6 +971,7 @@ function refreshFautes(){
     const typeKey=f.type==='Crime de guerre'?'Crime':'Brise';
     const payeKey=f.paye==='oui'?'oui':'non';
     const payeLabel=f.paye==='oui'?'Oui':'Non';
+    const nature=f.natureLabel||getRuleLabel(f.natureId,f.details);
     const tr=document.createElement('tr');tr.className='faute-row-clickable';tr.onclick=()=>openFauteDetail(f.id);
     tr.innerHTML=`<td style="white-space:nowrap;">${f.date}</td>
       <td><span class="fault-pill fault-${typeKey}">${f.type}</span></td>
@@ -846,7 +979,7 @@ function refreshFautes(){
       <td><span class="village-badge village-${f.village}">${f.village}</span></td>
       <td><span class="paid-pill paid-${payeKey}">${payeLabel}</span></td>
       <td style="font-size:0.78rem;color:var(--ink-light);font-style:italic;">${f.author||'?'}</td>
-      <td style="max-width:180px;font-size:0.82rem;font-style:italic;color:var(--ink-fade);">${f.details.substring(0,50)}${f.details.length>50?'…':''}</td>
+      <td style="max-width:180px;font-size:0.82rem;font-style:italic;color:var(--ink-fade);">${nature.substring(0,50)}${nature.length>50?'…':''}</td>
       <td onclick="event.stopPropagation()">${canDeleteFaute()?`<button class="btn btn-ghost btn-sm" onclick="deleteFaute('${f.id}')">✕</button>`:''}</td>`;
     tbody.appendChild(tr);
   });
@@ -1402,12 +1535,14 @@ document.querySelectorAll('.modal-overlay').forEach(m=>{
   m.addEventListener('click',e=>{if(e.target===m){m.classList.remove('open');editJugementId=null;currentFauteDetailId=null;}});
 });
 document.getElementById('confirm-paye').addEventListener('click',e=>{if(e.target===document.getElementById('confirm-paye'))closeConfirmPaye();});
+document.querySelectorAll('input[name="faute-type"]').forEach(r=>r.addEventListener('change',refreshNatureSelect));
 
 Object.assign(window,{
   showLogin,showRegister,doLogin,doRegister,doLogout,
   switchPage,previewPhoto,clearPhoto,
   addNinja,deleteNinja,refreshNinjas,
   addFaute,deleteFaute,openFauteDetail,toggleFautePaye,copyFauteResume,
+  addTraiteRule,deleteTraiteRule,
   openDossier,envoyerJugement,confirmJugement,
   cloturerJugement,ouvrirEditJugement,sauvegarderJugement,
   supprimerJugement,openProfil,
